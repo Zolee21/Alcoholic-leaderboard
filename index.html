@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ItalPont V4.1</title>
+<title>ItalPont V4.2</title>
 <style>
 :root{
   --bg:#0b0d10;--panel:#17191e;--panel2:#1d2026;--line:#2a2e36;
@@ -18,13 +18,12 @@ button{cursor:pointer}
 .hidden{display:none!important}
 .shell{max-width:1540px;margin:auto;padding:0 16px 28px}
 .hero{
-  margin-top:0;height:clamp(300px,22vw,390px);border-radius:0 0 22px 22px;
-  background:
-    linear-gradient(to bottom,rgba(0,0,0,.03),rgba(0,0,0,.10)),
-    url("assets/kulturfarm-banner.jpg") center 18%/cover no-repeat;
-  border:1px solid #3a3d44;border-top:0;box-shadow:0 16px 50px #0008;position:relative;overflow:hidden
+  margin-top:0;border-radius:0 0 22px 22px;border:1px solid #3a3d44;border-top:0;
+  box-shadow:0 16px 50px #0008;position:relative;overflow:hidden;background:#0b0d10
 }
-.hero:after{content:"";position:absolute;inset:auto 0 0;height:80px;background:linear-gradient(transparent,#0b0d10dd)}
+.hero img{
+  display:block;width:100%;height:auto;object-fit:contain;object-position:center;
+}
 .navbar{
   position:sticky;top:0;z-index:40;margin-top:-1px;background:#111317ee;backdrop-filter:blur(16px);
   border:1px solid #2a2d33;border-radius:0 0 18px 18px;display:flex;align-items:center;gap:18px;padding:12px 18px;box-shadow:0 10px 30px #0007
@@ -89,7 +88,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 .msg{margin-top:10px;padding:10px;border-radius:10px;background:#252932}
 .msg.success{background:#123d2b}.msg.error{background:#4d172b}
 .auth-wrap{max-width:760px;margin:26px auto}
-.auth-hero{height:240px;background:url("assets/kulturfarm-banner.jpg") center/cover;border-radius:18px 18px 0 0}
+.auth-hero{border-radius:18px 18px 0 0;overflow:hidden;background:#0b0d10}.auth-hero img{display:block;width:100%;height:auto}
 .auth-panel{border-radius:0 0 18px 18px}
 .profile-layout{display:grid;grid-template-columns:260px 1fr;gap:20px}
 .profile-box{text-align:center}
@@ -104,7 +103,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 .mobile-only{display:none}
 @media(max-width:1150px){.grid-home{grid-template-columns:320px 1fr}.rightcol{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:20px}.navbar{flex-wrap:wrap}.brand{min-width:auto}.user-chip{min-width:auto}.navlinks{order:3;width:100%}}
 @media(max-width:760px){
-  .shell{padding:0 10px 20px}.hero{height:220px;background-position:center 28%}.navbar{position:static;padding:10px}.brand{font-size:22px}.brand span:first-child{font-size:28px}
+  .shell{padding:0 10px 20px}.hero{border-radius:0 0 14px 14px}.navbar{position:static;padding:10px}.brand{font-size:22px}.brand span:first-child{font-size:28px}
   .user-chip .who{display:none}.navlinks{justify-content:flex-start;overflow:auto;flex-wrap:nowrap}.navbtn{white-space:nowrap}
   .grid-home{grid-template-columns:1fr}.rightcol{grid-column:auto;grid-template-columns:1fr}.historybar{grid-template-columns:1fr 1fr}.historybar .datebox,.period-label{grid-column:1/-1}
   .admin-grid,.profile-layout{grid-template-columns:1fr}.category-row{grid-template-columns:1fr 90px}.category-row .actions{grid-column:1/-1}.user-row{grid-template-columns:1fr 90px}.user-row button{grid-column:1/-1}
@@ -115,10 +114,10 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 <body>
 <div id="publicAuth">
   <div class="shell auth-wrap">
-    <div class="auth-hero"></div>
+    <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V4.1</h1>
+        <h1>🍺 ItalPont V4.2</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -134,7 +133,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 
 <div id="app" class="hidden">
   <div class="shell">
-    <div class="hero"></div>
+    <div class="hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="navbar">
       <div class="brand"><span>🍺</span><b>ItalPont</b></div>
       <div class="navlinks">
@@ -381,7 +380,7 @@ async function loadHome(){
   try{
     const [all,week]=await Promise.all([fetchLeaderboard('all'),fetchLeaderboard('week')]);
     $('homeOverall').innerHTML=rankRows(all.rows,5);$('homeWeek').innerHTML=rankRows(week.rows,3);$('homeWeekLabel').textContent=week.label;
-    const {data}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('display_order',{ascending:false}).order('created_at',{ascending:false}).limit(8);
+    const {data}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(8);
     $('homeFeed').innerHTML=(data||[]).map(feedHtml).join('')||'<div class="muted">Még nincs feltöltött ital.</div>';
   }catch(e){console.error(e)}
 }
@@ -395,16 +394,11 @@ function shiftPeriod(dir){if(currentPeriod==='all')return;const d=new Date(selec
 async function loadLeaderboard(){try{const r=await fetchLeaderboard(currentPeriod,selectedLeaderDate);$('periodLabel').textContent=r.label;$('leaderboard').innerHTML=rankRows(r.rows)}catch(e){$('leaderboard').textContent=e.message}}
 
 function feedHtml(d){
-  const adminControls=currentProfile?.is_admin?`
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-      <button class="btn secondary small" title="Előrébb" onclick="moveDrink(${d.id},'up',event)">⬆️ Előrébb</button>
-      <button class="btn secondary small" title="Hátrébb" onclick="moveDrink(${d.id},'down',event)">⬇️ Hátrébb</button>
-      <button class="btn danger small" onclick="deleteDrink(${d.id},event)">🗑️ Törlés</button>
-    </div>`:'';
-  return `<div class="feed-card"><img class="feed-img" src="${d.photo_url}" onclick="openImage('${encodeURIComponent(d.photo_url)}')"><div><div class="feed-title">${esc(d.category_name||'Ital')}</div><div class="muted">${esc(d.drink_name)} · ${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</div>${adminControls}</div><div class="feed-points">+${d.points}<div class="muted">pont</div></div></div>`;
+  const adminDelete=currentProfile?.is_admin?`<button class="btn danger small" style="margin-top:8px" onclick="deleteDrink(${d.id},event)">🗑️ Törlés</button>`:'';
+  return `<div class="feed-card"><img class="feed-img" src="${d.photo_url}" onclick="openImage('${encodeURIComponent(d.photo_url)}')"><div><div class="feed-title">${esc(d.category_name||'Ital')}</div><div class="muted">${esc(d.drink_name)} · ${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</div>${adminDelete}</div><div class="feed-points">+${d.points}<div class="muted">pont</div></div></div>`;
 }
 async function loadDrinks(){
-  const {data,error}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('display_order',{ascending:false}).order('created_at',{ascending:false}).limit(60);
+  const {data,error}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(60);
   if(error)return $('allDrinks').textContent=error.message;
   $('allDrinks').innerHTML=(data||[]).map(d=>`<div class="item-card">${feedHtml(d)}</div>`).join('')||'<div class="muted">Nincs feltöltés.</div>';
 }
@@ -416,36 +410,12 @@ async function uploadDrink(){
   const ext=(file.name.split('.').pop()||'jpg').toLowerCase(),path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;
   const {error:upErr}=await sb.storage.from('drink-photos').upload(path,file,{contentType:file.type});if(upErr)return message('uploadMsg',upErr.message,true);
   const photoUrl=sb.storage.from('drink-photos').getPublicUrl(path).data.publicUrl;
-  const {error}=await sb.from('drinks').insert({user_id:currentUser.id,drink_name:name,category_id:cat.id,category_name:cat.name,points:cat.points,photo_url:photoUrl,display_order:Date.now()});
+  const {error}=await sb.from('drinks').insert({user_id:currentUser.id,drink_name:name,category_id:cat.id,category_name:cat.name,points:cat.points,photo_url:photoUrl});
   if(error)return message('uploadMsg',error.message,true);
   $('drinkName').value='';$('photo').value='';message('uploadMsg',`+${cat.points} pont!`);
   await loadProfile();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
 }
 
-
-async function moveDrink(id,direction,event){
-  event?.stopPropagation();
-  if(!currentProfile?.is_admin)return;
-  const {data,error}=await sb.from('drinks')
-    .select('id,display_order,created_at')
-    .order('display_order',{ascending:false})
-    .order('created_at',{ascending:false});
-  if(error)return alert(error.message);
-  const rows=data||[];
-  const idx=rows.findIndex(x=>Number(x.id)===Number(id));
-  if(idx<0)return;
-  const otherIdx=direction==='up'?idx-1:idx+1;
-  if(otherIdx<0||otherIdx>=rows.length)return;
-  const a=rows[idx],b=rows[otherIdx];
-  let av=Number(a.display_order),bv=Number(b.display_order);
-  if(!Number.isFinite(av))av=Date.parse(a.created_at)||0;
-  if(!Number.isFinite(bv))bv=Date.parse(b.created_at)||0;
-  const {error:e1}=await sb.from('drinks').update({display_order:bv}).eq('id',a.id);
-  if(e1)return alert(e1.message);
-  const {error:e2}=await sb.from('drinks').update({display_order:av}).eq('id',b.id);
-  if(e2)return alert(e2.message);
-  await Promise.all([loadHome(),loadDrinks()]);
-}
 
 async function deleteDrink(id,event){
   event?.stopPropagation();
@@ -485,8 +455,36 @@ async function saveProfile(){
 async function loadAdmin(){await Promise.all([loadAdminCategories(),loadAdminUsers()])}
 async function loadAdminCategories(){
   const {data}=await sb.from('categories').select('*').order('sort_order',{ascending:true}).order('name');
-  $('adminCategories').innerHTML=(data||[]).map(c=>`<div class="category-row"><input id="cat-name-${c.id}" value="${esc(c.name)}"><input id="cat-points-${c.id}" type="number" min="0" value="${c.points}"><div class="actions" style="display:flex;gap:8px"><button class="btn green small" onclick="updateCategory(${c.id})">Mentés</button><button class="btn danger small" onclick="deleteCategory(${c.id})">Törlés</button></div></div>`).join('');
+  $('adminCategories').innerHTML=(data||[]).map((c,i,arr)=>`<div class="category-row"><input id="cat-name-${c.id}" value="${esc(c.name)}"><input id="cat-points-${c.id}" type="number" min="0" value="${c.points}"><div class="actions" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn secondary small" ${i===0?'disabled':''} onclick="moveCategory(${c.id},'up')">⬆️</button><button class="btn secondary small" ${i===arr.length-1?'disabled':''} onclick="moveCategory(${c.id},'down')">⬇️</button><button class="btn green small" onclick="updateCategory(${c.id})">Mentés</button><button class="btn danger small" onclick="deleteCategory(${c.id})">Törlés</button></div></div>`).join('');
 }
+
+async function moveCategory(id,direction){
+  if(!currentProfile?.is_admin)return;
+  const {data,error}=await sb.from('categories')
+    .select('id,name,sort_order')
+    .order('sort_order',{ascending:true})
+    .order('name',{ascending:true});
+  if(error)return message('adminMsg',error.message,true);
+  const rows=data||[];
+  const idx=rows.findIndex(c=>Number(c.id)===Number(id));
+  if(idx<0)return;
+  const otherIdx=direction==='up'?idx-1:idx+1;
+  if(otherIdx<0||otherIdx>=rows.length)return;
+
+  const a=rows[idx],b=rows[otherIdx];
+  const aOrder=Number.isFinite(Number(a.sort_order))?Number(a.sort_order):(idx+1)*10;
+  const bOrder=Number.isFinite(Number(b.sort_order))?Number(b.sort_order):(otherIdx+1)*10;
+
+  const {error:e1}=await sb.from('categories').update({sort_order:bOrder}).eq('id',a.id);
+  if(e1)return message('adminMsg',e1.message,true);
+  const {error:e2}=await sb.from('categories').update({sort_order:aOrder}).eq('id',b.id);
+  if(e2)return message('adminMsg',e2.message,true);
+
+  message('adminMsg','Kategória sorrendje módosítva.');
+  await loadCategories();
+  await loadAdminCategories();
+}
+
 async function addCategory(){const name=$('newCategoryName').value.trim(),points=Number($('newCategoryPoints').value);if(!name||!Number.isFinite(points)||points<0)return message('adminMsg','Adj meg nevet és pontot.',true);const {error}=await sb.from('categories').insert({name,points});if(error)return message('adminMsg',error.message,true);$('newCategoryName').value='';$('newCategoryPoints').value='';message('adminMsg','Kategória hozzáadva.');await loadCategories();await loadAdminCategories()}
 async function updateCategory(id){const name=$(`cat-name-${id}`).value.trim(),points=Number($(`cat-points-${id}`).value);const {error}=await sb.from('categories').update({name,points}).eq('id',id);if(error)return message('adminMsg',error.message,true);message('adminMsg','Módosítva.');await loadCategories();await loadAdminCategories()}
 async function deleteCategory(id){if(!confirm('Biztosan törlöd ezt a kategóriát?'))return;const {error}=await sb.from('categories').delete().eq('id',id);if(error)return message('adminMsg',error.message,true);message('adminMsg','Kategória törölve.');await loadCategories();await loadAdminCategories()}
