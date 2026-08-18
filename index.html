@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ItalPont V4.2</title>
+<title>ItalPont V4.3</title>
 <style>
 :root{
   --bg:#0b0d10;--panel:#17191e;--panel2:#1d2026;--line:#2a2e36;
@@ -117,7 +117,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V4.2</h1>
+        <h1>🍺 ItalPont V4.3</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -254,7 +254,13 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
                 <input id="newCategoryName" placeholder="Új kategória (emoji is mehet)">
                 <input id="newCategoryPoints" type="number" min="0" step="1" placeholder="Pont">
               </div>
-              <button class="btn" style="margin-top:10px" onclick="addCategory()">Kategória hozzáadása</button>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+                <button class="btn secondary" onclick="addCategoryDraft()">＋ Hozzáadás a listához</button>
+                <button class="btn green" onclick="saveAllCategories()">💾 Minden módosítás mentése</button>
+              </div>
+              <div class="muted" style="margin-top:10px">
+                A pontérték módosítása visszamenőleg is érvényes: a korábbi italok pontjai és a ranglisták is újraszámolódnak.
+              </div>
               <div id="adminMsg" class="msg hidden"></div>
             </div>
             <div>
@@ -291,6 +297,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 const SUPABASE_URL="https://wqtldrwvharmlkqqfdmk.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_oCTAIcer2GaXeokcd6JN8A_ulUZh8QN";
 let sb=null,currentUser=null,currentProfile=null,categories=[],currentPeriod='week',selectedLeaderDate=new Date();
+let categoryDraft=[],deletedCategoryIds=[];
 let croppedAvatarBlob=null,cropObjectUrl=null;
 const crop={img:null,minScale:1,scale:1,x:0,y:0,drag:false,lastX:0,lastY:0};
 const $=id=>document.getElementById(id);
@@ -454,40 +461,97 @@ async function saveProfile(){
 
 async function loadAdmin(){await Promise.all([loadAdminCategories(),loadAdminUsers()])}
 async function loadAdminCategories(){
-  const {data}=await sb.from('categories').select('*').order('sort_order',{ascending:true}).order('name');
-  $('adminCategories').innerHTML=(data||[]).map((c,i,arr)=>`<div class="category-row"><input id="cat-name-${c.id}" value="${esc(c.name)}"><input id="cat-points-${c.id}" type="number" min="0" value="${c.points}"><div class="actions" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn secondary small" ${i===0?'disabled':''} onclick="moveCategory(${c.id},'up')">⬆️</button><button class="btn secondary small" ${i===arr.length-1?'disabled':''} onclick="moveCategory(${c.id},'down')">⬇️</button><button class="btn green small" onclick="updateCategory(${c.id})">Mentés</button><button class="btn danger small" onclick="deleteCategory(${c.id})">Törlés</button></div></div>`).join('');
-}
-
-async function moveCategory(id,direction){
-  if(!currentProfile?.is_admin)return;
-  const {data,error}=await sb.from('categories')
-    .select('id,name,sort_order')
-    .order('sort_order',{ascending:true})
-    .order('name',{ascending:true});
+  const {data,error}=await sb.from('categories').select('*').order('sort_order',{ascending:true}).order('name');
   if(error)return message('adminMsg',error.message,true);
-  const rows=data||[];
-  const idx=rows.findIndex(c=>Number(c.id)===Number(id));
-  if(idx<0)return;
-  const otherIdx=direction==='up'?idx-1:idx+1;
-  if(otherIdx<0||otherIdx>=rows.length)return;
-
-  const a=rows[idx],b=rows[otherIdx];
-  const aOrder=Number.isFinite(Number(a.sort_order))?Number(a.sort_order):(idx+1)*10;
-  const bOrder=Number.isFinite(Number(b.sort_order))?Number(b.sort_order):(otherIdx+1)*10;
-
-  const {error:e1}=await sb.from('categories').update({sort_order:bOrder}).eq('id',a.id);
-  if(e1)return message('adminMsg',e1.message,true);
-  const {error:e2}=await sb.from('categories').update({sort_order:aOrder}).eq('id',b.id);
-  if(e2)return message('adminMsg',e2.message,true);
-
-  message('adminMsg','Kategória sorrendje módosítva.');
-  await loadCategories();
-  await loadAdminCategories();
+  categoryDraft=(data||[]).map((c,i)=>({
+    id:c.id,
+    name:c.name,
+    points:Number(c.points)||0,
+    sort_order:Number(c.sort_order)||((i+1)*10)
+  }));
+  deletedCategoryIds=[];
+  renderCategoryDraft();
 }
+function renderCategoryDraft(){
+  $('adminCategories').innerHTML=categoryDraft.map((c,i)=>`
+    <div class="category-row">
+      <input value="${esc(c.name)}" oninput="updateCategoryDraft(${i},'name',this.value)">
+      <input type="number" min="0" step="1" value="${c.points}" oninput="updateCategoryDraft(${i},'points',this.value)">
+      <div class="actions" style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn secondary small" ${i===0?'disabled':''} onclick="moveCategoryDraft(${i},-1)">⬆️</button>
+        <button class="btn secondary small" ${i===categoryDraft.length-1?'disabled':''} onclick="moveCategoryDraft(${i},1)">⬇️</button>
+        <button class="btn danger small" onclick="removeCategoryDraft(${i})">🗑️</button>
+      </div>
+    </div>`).join('') || '<div class="muted">Nincs kategória.</div>';
+}
+function updateCategoryDraft(index,field,value){
+  if(!categoryDraft[index])return;
+  if(field==='points'){
+    const n=Number(value);
+    categoryDraft[index].points=Number.isFinite(n)?Math.max(0,Math.round(n)):0;
+  }else{
+    categoryDraft[index].name=value;
+  }
+}
+function moveCategoryDraft(index,delta){
+  const other=index+delta;
+  if(index<0||other<0||index>=categoryDraft.length||other>=categoryDraft.length)return;
+  [categoryDraft[index],categoryDraft[other]]=[categoryDraft[other],categoryDraft[index]];
+  renderCategoryDraft();
+}
+function removeCategoryDraft(index){
+  const c=categoryDraft[index];
+  if(!c)return;
+  if(!confirm(`Biztosan eltávolítod ezt a kategóriát?
 
-async function addCategory(){const name=$('newCategoryName').value.trim(),points=Number($('newCategoryPoints').value);if(!name||!Number.isFinite(points)||points<0)return message('adminMsg','Adj meg nevet és pontot.',true);const {error}=await sb.from('categories').insert({name,points});if(error)return message('adminMsg',error.message,true);$('newCategoryName').value='';$('newCategoryPoints').value='';message('adminMsg','Kategória hozzáadva.');await loadCategories();await loadAdminCategories()}
-async function updateCategory(id){const name=$(`cat-name-${id}`).value.trim(),points=Number($(`cat-points-${id}`).value);const {error}=await sb.from('categories').update({name,points}).eq('id',id);if(error)return message('adminMsg',error.message,true);message('adminMsg','Módosítva.');await loadCategories();await loadAdminCategories()}
-async function deleteCategory(id){if(!confirm('Biztosan törlöd ezt a kategóriát?'))return;const {error}=await sb.from('categories').delete().eq('id',id);if(error)return message('adminMsg',error.message,true);message('adminMsg','Kategória törölve.');await loadCategories();await loadAdminCategories()}
+${c.name}
+
+A korábbi italok megmaradnak a már tárolt kategórianévvel és ponttal.`))return;
+  if(c.id)deletedCategoryIds.push(c.id);
+  categoryDraft.splice(index,1);
+  renderCategoryDraft();
+}
+function addCategoryDraft(){
+  const name=$('newCategoryName').value.trim(),points=Number($('newCategoryPoints').value);
+  if(!name||!Number.isFinite(points)||points<0)return message('adminMsg','Adj meg nevet és érvényes pontot.',true);
+  categoryDraft.push({id:null,name,points:Math.round(points),sort_order:(categoryDraft.length+1)*10});
+  $('newCategoryName').value='';$('newCategoryPoints').value='';
+  renderCategoryDraft();
+  message('adminMsg','Az új kategória bekerült a módosítások közé. A véglegesítéshez nyomd meg a Minden módosítás mentése gombot.');
+}
+async function saveAllCategories(){
+  if(!currentProfile?.is_admin)return;
+  if(categoryDraft.length===0 && deletedCategoryIds.length===0)return message('adminMsg','Nincs mentendő kategória.',true);
+
+  const names=new Set();
+  for(const c of categoryDraft){
+    c.name=(c.name||'').trim();
+    c.points=Math.max(0,Math.round(Number(c.points)||0));
+    if(!c.name)return message('adminMsg','Minden kategóriának legyen neve.',true);
+    const key=c.name.toLocaleLowerCase('hu-HU');
+    if(names.has(key))return message('adminMsg','Két kategória neve nem lehet ugyanaz.',true);
+    names.add(key);
+  }
+
+  const payload={
+    items:categoryDraft.map((c,i)=>({
+      id:c.id,
+      name:c.name,
+      points:c.points,
+      sort_order:(i+1)*10
+    })),
+    delete_ids:[...new Set(deletedCategoryIds)]
+  };
+
+  message('adminMsg','Mentés és visszamenőleges pont-újraszámítás...');
+  const {error}=await sb.rpc('save_categories_bulk',{payload});
+  if(error)return message('adminMsg',error.message,true);
+
+  message('adminMsg','Minden kategóriamódosítás mentve. A korábbi italok és ranglisták pontjai is frissültek.');
+  await loadCategories();
+  await loadProfile();
+  await Promise.all([loadHome(),loadLeaderboard(),loadDrinks(),loadAdminCategories()]);
+}
 async function loadAdminUsers(){
   const {data,error}=await sb.from('profiles').select('id,display_name,is_admin,points').order('display_name');if(error)return;
   $('adminUsers').innerHTML=(data||[]).map(u=>`<div class="user-row"><div><b>${esc(u.display_name||'Névtelen')}</b><div class="muted">${u.points||0} pont</div></div><select id="role-${u.id}" ${u.id===currentUser.id?'disabled':''}><option value="false" ${!u.is_admin?'selected':''}>Játékos</option><option value="true" ${u.is_admin?'selected':''}>Admin</option></select><button class="btn small" ${u.id===currentUser.id?'disabled':''} onclick="saveUserRole('${u.id}')">Mentés</button></div>`).join('');
