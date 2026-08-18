@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ItalPont – Baráti Alkohol Pontverseny</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Arial;background:#101218;color:#f4f4f5}
+header{padding:22px 18px;background:linear-gradient(135deg,#6d28d9,#db2777);position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:25px}header p{margin:5px 0 0;opacity:.9}
+main{max-width:1000px;margin:auto;padding:18px}.card{background:#191b23;border:1px solid #2b2e39;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 8px 30px #0003}
+input,select,button{width:100%;padding:12px;border-radius:10px;border:1px solid #363946;background:#11131a;color:#fff;font-size:15px}
+button{background:#7c3aed;border:0;font-weight:700;cursor:pointer}button.secondary{background:#30323d}button.danger{background:#be123c}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.row{display:flex;gap:10px;align-items:center}.row>*{flex:1}
+.hidden{display:none!important}.muted{color:#a7a9b4;font-size:13px}.msg{padding:10px;border-radius:10px;margin:10px 0;background:#252834}.error{background:#4c172a}.success{background:#123d2b}
+table{width:100%;border-collapse:collapse}th,td{padding:10px;text-align:left;border-bottom:1px solid #2b2e39}
+.rank{font-size:18px;font-weight:800}.pill{display:inline-block;padding:4px 9px;border-radius:999px;background:#2b2540;color:#d8b4fe;font-size:12px}
+img.thumb{width:76px;height:76px;object-fit:cover;border-radius:10px}.drink{display:flex;gap:12px;align-items:center}
+.small{font-size:12px}.topline{display:flex;justify-content:space-between;gap:10px;align-items:center}
+@media(max-width:600px){header{position:static}.row{flex-direction:column}.row>*{width:100%}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🍻 ItalPont</h1>
+  <p>Fotózd le az italt, válassz kategóriát, gyűjts pontokat!</p>
+</header>
+
+<main>
+<section id="auth" class="card">
+  <h2>Belépés / regisztráció</h2>
+  <div class="grid">
+    <div><label>Email</label><input id="email" type="email" placeholder="te@email.hu"></div>
+    <div><label>Jelszó</label><input id="password" type="password" placeholder="legalább 6 karakter"></div>
+    <div><label>Megjelenített név</label><input id="displayName" placeholder="pl. Zoli"></div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <button onclick="register()">Regisztráció</button>
+    <button class="secondary" onclick="login()">Belépés</button>
+  </div>
+  <div id="authMsg" class="msg hidden"></div>
+  <p class="muted">A valódi többfelhasználós működéshez a Supabase projektet kell beállítani a <code>setup.sql</code> és az index.html tetején található két érték alapján.</p>
+</section>
+
+<section id="app" class="hidden">
+  <div class="card">
+    <div class="topline">
+      <div><b id="hello"></b><div class="muted" id="myPoints"></div></div>
+      <button class="secondary" style="max-width:130px" onclick="logout()">Kilépés</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📸 Új ital feltöltése</h2>
+    <div class="grid">
+      <div><label>Ital neve</label><input id="drinkName" placeholder="pl. Jägermeister"></div>
+      <div><label>Kategória</label><select id="category"></select></div>
+      <div><label>Fotó</label><input id="photo" type="file" accept="image/*" capture="environment"></div>
+    </div>
+    <button style="margin-top:12px" onclick="uploadDrink()">Pont hozzáadása</button>
+    <div id="uploadMsg" class="msg hidden"></div>
+  </div>
+
+  <div class="card">
+    <h2>🏆 Ranglista</h2>
+    <div id="leaderboard"></div>
+  </div>
+
+  <div class="card">
+    <h2>📷 Legutóbbi italok</h2>
+    <div id="drinks"></div>
+  </div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* =========================
+   SUPABASE BEÁLLÍTÁS
+   =========================
+   1. Hozz létre egy ingyenes projektet a Supabase-en.
+   2. A Project URL-t és anon public key-t írd ide.
+*/
+const SUPABASE_URL = "https://wqtldrwvharmlkqqfdmk.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_oCTAIcer2GaXeokcd6JN8A_ulUZh8QN";
+
+const categories = [
+  {name:"🥤 Sima sör", points:5},
+  {name:"🍺 Prémium / kézműves sör", points:10},
+  {name:"🍷 Bor / pezsgő", points:10},
+  {name:"🥃 Rövidital", points:15},
+  {name:"🍹 Koktél", points:20},
+  {name:"🔥 Extra ritka / különleges ital", points:30}
+];
+
+let sb = null;
+if (!SUPABASE_URL.startsWith("IDE_")) {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+const $ = id => document.getElementById(id);
+function msg(id,text,error=false){$(id).textContent=text;$(id).className="msg "+(error?"error":"success");}
+function hide(id){$(id).classList.add("hidden")}
+function show(id){$(id).classList.remove("hidden")}
+
+categories.forEach(c=>{
+  const o=document.createElement("option"); o.value=c.name; o.textContent=`${c.name} — ${c.points} pont`; $("category").appendChild(o);
+});
+
+async function register(){
+  if(!sb) return msg("authMsg","Előbb állítsd be a Supabase URL-t és anon kulcsot az index.html-ben.",true);
+  const email=$("email").value.trim(), password=$("password").value, name=$("displayName").value.trim();
+  if(!email||password.length<6||!name) return msg("authMsg","Tölts ki minden mezőt; a jelszó legalább 6 karakter legyen.",true);
+  const {data,error}=await sb.auth.signUp({email,password,options:{data:{display_name:name}}});
+  if(error) return msg("authMsg",error.message,true);
+  if(data.user) {
+    await sb.from("profiles").upsert({id:data.user.id,display_name:name});
+  }
+  msg("authMsg","Sikeres regisztráció. Ha email-megerősítés van bekapcsolva, ellenőrizd a levelezésed.");
+}
+
+async function login(){
+  if(!sb) return msg("authMsg","Előbb állítsd be a Supabase URL-t és anon kulcsot az index.html-ben.",true);
+  const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
+  if(error) return msg("authMsg",error.message,true);
+  await start();
+}
+async function logout(){if(sb) await sb.auth.signOut(); location.reload();}
+
+async function start(){
+  if(!sb) return;
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) return;
+  hide("auth");show("app");
+  const user=session.user;
+  const name=user.user_metadata?.display_name || user.email.split("@")[0];
+  $("hello").textContent="Szia, "+name+"! 👋";
+  await loadAll();
+}
+async function loadAll(){
+  const {data:{session}}=await sb.auth.getSession(); if(!session)return;
+  const uid=session.user.id;
+  const {data:me}=await sb.from("profiles").select("display_name,points").eq("id",uid).single();
+  $("myPoints").textContent=`Saját pontszám: ${me?.points||0} pont`;
+  await loadLeaderboard();
+  await loadDrinks();
+}
+async function loadLeaderboard(){
+  const {data,error}=await sb.from("profiles").select("display_name,points").order("points",{ascending:false});
+  if(error)return $("leaderboard").textContent=error.message;
+  $("leaderboard").innerHTML="<table><thead><tr><th>#</th><th>Játékos</th><th>Pont</th></tr></thead><tbody>"+
+    (data||[]).map((x,i)=>`<tr><td class="rank">${i+1}.</td><td>${esc(x.display_name||"Névtelen")}</td><td><b>${x.points||0}</b></td></tr>`).join("")+
+    "</tbody></table>";
+}
+async function loadDrinks(){
+  const {data,error}=await sb.from("drinks").select("*,profiles(display_name)").order("created_at",{ascending:false}).limit(30);
+  if(error)return $("drinks").textContent=error.message;
+  $("drinks").innerHTML=(data||[]).map(d=>`<div class="drink card">
+    ${d.photo_url?`<img class="thumb" src="${d.photo_url}" alt="ital">`:""}
+    <div><b>${esc(d.drink_name)}</b><br><span class="pill">${esc(d.category)}</span> <b>+${d.points} pont</b>
+    <div class="muted">${esc(d.profiles?.display_name||"Névtelen")} · ${new Date(d.created_at).toLocaleString("hu-HU")}</div></div>
+  </div>`).join("") || "<p class='muted'>Még nincs feltöltött ital.</p>";
+}
+async function uploadDrink(){
+  const {data:{session}}=await sb.auth.getSession(); if(!session)return;
+  const name=$("drinkName").value.trim(), category=$("category").value, file=$("photo").files[0];
+  if(!name||!file)return msg("uploadMsg","Add meg az ital nevét és válassz fotót.",true);
+  const cat=categories.find(x=>x.name===category);
+  msg("uploadMsg","Feltöltés...");
+  const ext=(file.name.split(".").pop()||"jpg").toLowerCase();
+  const path=`${session.user.id}/${crypto.randomUUID()}.${ext}`;
+  const {error:upErr}=await sb.storage.from("drink-photos").upload(path,file,{contentType:file.type});
+  if(upErr)return msg("uploadMsg",upErr.message,true);
+  const {data:urlData}=sb.storage.from("drink-photos").getPublicUrl(path);
+  const {error:dbErr}=await sb.from("drinks").insert({
+    user_id:session.user.id,drink_name:name,category,points:cat.points,photo_url:urlData.publicUrl
+  });
+  if(dbErr)return msg("uploadMsg",dbErr.message,true);
+  $("drinkName").value="";$("photo").value="";
+  msg("uploadMsg",`+${cat.points} pont! Az ital felkerült a listára.`);
+  await loadAll();
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+if(sb) sb.auth.onAuthStateChange(()=>start());
+start();
+</script>
+</body>
+</html>
