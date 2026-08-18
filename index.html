@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ItalPont V4.3</title>
+<title>ItalPont V4.4</title>
 <style>
 :root{
   --bg:#0b0d10;--panel:#17191e;--panel2:#1d2026;--line:#2a2e36;
@@ -117,7 +117,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V4.3</h1>
+        <h1>🍺 ItalPont V4.4</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -212,7 +212,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
           <div class="form-grid">
             <div><label>Ital neve</label><input id="drinkName" placeholder="pl. Mojito"></div>
             <div><label>Kategória</label><select id="category"></select></div>
-            <div><label>Fotó</label><input id="photo" type="file" accept="image/*" capture="environment"></div>
+            <div><label>Fotó</label><input id="photo" type="file" accept="image/*" capture="environment"><div class="muted" style="margin-top:5px">Automatikusan max. 1600 px-re és WebP-re tömörítjük, majd Cloudflare R2-re töltjük.</div></div>
           </div>
           <button class="btn" style="margin-top:12px" onclick="uploadDrink()">Feltöltés és pont hozzáadása</button>
           <div id="uploadMsg" class="msg hidden"></div>
@@ -310,6 +310,57 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&l
 function avatarUrl(url){return url||'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#2b3140"/><circle cx="50" cy="38" r="18" fill="#fbbf24"/><path d="M18 90c5-25 20-35 32-35s27 10 32 35" fill="#fbbf24"/></svg>`)}
 function localDateInputValue(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
 function huDate(d){return d.toLocaleDateString('hu-HU',{year:'numeric',month:'2-digit',day:'2-digit'})}
+
+async function compressImageFile(file,maxDimension=1600,quality=.82){
+  if(!file?.type?.startsWith('image/'))throw new Error('Csak képfájl tölthető fel.');
+  if(file.size>30*1024*1024)throw new Error('A kiválasztott kép túl nagy. Maximum 30 MB.');
+
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((resolve,reject)=>{
+      const x=new Image();
+      x.onload=()=>resolve(x);
+      x.onerror=()=>reject(new Error('A kép nem olvasható.'));
+      x.src=url;
+    });
+    let w=img.naturalWidth,h=img.naturalHeight;
+    const scale=Math.min(1,maxDimension/Math.max(w,h));
+    w=Math.max(1,Math.round(w*scale));h=Math.max(1,Math.round(h*scale));
+    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d',{alpha:false});
+    ctx.drawImage(img,0,0,w,h);
+    let blob=await new Promise(r=>canvas.toBlob(r,'image/webp',quality));
+    if(!blob)blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',quality));
+    if(!blob)throw new Error('A kép tömörítése sikertelen.');
+    return blob;
+  }finally{URL.revokeObjectURL(url)}
+}
+async function r2SignUpload(kind,contentType){
+  const {data,error}=await sb.functions.invoke('r2-storage',{
+    body:{action:'sign-upload',kind,contentType}
+  });
+  if(error)throw new Error(error.message||'Nem sikerült R2 feltöltési URL-t kérni.');
+  if(!data?.uploadUrl||!data?.publicUrl||!data?.key)throw new Error(data?.error||'Hiányos R2 válasz.');
+  return data;
+}
+async function uploadBlobToR2(blob,kind){
+  const contentType=blob.type||'image/webp';
+  const signed=await r2SignUpload(kind,contentType);
+  const res=await fetch(signed.uploadUrl,{
+    method:'PUT',
+    headers:{'Content-Type':contentType},
+    body:blob
+  });
+  if(!res.ok)throw new Error(`Cloudflare R2 feltöltési hiba (${res.status}). Ellenőrizd a bucket CORS beállítását.`);
+  return {url:signed.publicUrl,key:signed.key};
+}
+async function deleteR2Object(key){
+  if(!key)return;
+  const {data,error}=await sb.functions.invoke('r2-storage',{body:{action:'delete',key}});
+  if(error)throw new Error(error.message||'R2 törlési hiba.');
+  if(data?.ok===false)throw new Error(data.error||'R2 törlési hiba.');
+}
+
 function showPage(page,btn){
   document.querySelectorAll('main section[id^=page-]').forEach(x=>x.classList.add('hidden'));
   show('page-'+page);
@@ -412,31 +463,75 @@ async function loadDrinks(){
 async function uploadDrink(){
   const name=$('drinkName').value.trim(),file=$('photo').files[0],catId=Number($('category').value);
   if(!name||!file||!catId)return message('uploadMsg','Adj meg italnevet, kategóriát és fotót.',true);
-  const cat=categories.find(c=>Number(c.id)===catId);if(!cat)return message('uploadMsg','Érvénytelen kategória.',true);
-  message('uploadMsg','Feltöltés...');
-  const ext=(file.name.split('.').pop()||'jpg').toLowerCase(),path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;
-  const {error:upErr}=await sb.storage.from('drink-photos').upload(path,file,{contentType:file.type});if(upErr)return message('uploadMsg',upErr.message,true);
-  const photoUrl=sb.storage.from('drink-photos').getPublicUrl(path).data.publicUrl;
-  const {error}=await sb.from('drinks').insert({user_id:currentUser.id,drink_name:name,category_id:cat.id,category_name:cat.name,points:cat.points,photo_url:photoUrl});
-  if(error)return message('uploadMsg',error.message,true);
-  $('drinkName').value='';$('photo').value='';message('uploadMsg',`+${cat.points} pont!`);
-  await loadProfile();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
+  const cat=categories.find(c=>Number(c.id)===catId);
+  if(!cat)return message('uploadMsg','Érvénytelen kategória.',true);
+
+  try{
+    message('uploadMsg','Kép optimalizálása...');
+    const compressed=await compressImageFile(file,1600,.82);
+    const before=(file.size/1024/1024).toFixed(1);
+    const after=(compressed.size/1024/1024).toFixed(2);
+
+    message('uploadMsg',`Feltöltés Cloudflare R2-re… (${before} MB → ${after} MB)`);
+    const uploaded=await uploadBlobToR2(compressed,'drink');
+
+    const {error}=await sb.from('drinks').insert({
+      user_id:currentUser.id,
+      drink_name:name,
+      category_id:cat.id,
+      category_name:cat.name,
+      points:cat.points,
+      photo_url:uploaded.url,
+      photo_key:uploaded.key
+    });
+    if(error){
+      try{await deleteR2Object(uploaded.key)}catch(_){}
+      throw error;
+    }
+
+    $('drinkName').value='';$('photo').value='';
+    message('uploadMsg',`+${cat.points} pont! A kép Cloudflare R2-re került.`);
+    await loadProfile();
+    await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
+  }catch(e){
+    console.error(e);
+    message('uploadMsg',e.message||String(e),true);
+  }
 }
 
 
 async function deleteDrink(id,event){
   event?.stopPropagation();
   if(!currentProfile?.is_admin)return;
-  const {data,error}=await sb.from('drinks').select('id,drink_name,points,photo_url').eq('id',id).single();if(error)return alert(error.message);
-  if(!confirm(`Biztosan törlöd?\n\n${data.drink_name}\n-${data.points} pont`))return;
-  const {error:delErr}=await sb.from('drinks').delete().eq('id',id);if(delErr)return alert(delErr.message);
+  const {data,error}=await sb.from('drinks')
+    .select('id,drink_name,points,photo_url,photo_key')
+    .eq('id',id).single();
+  if(error)return alert(error.message);
+  if(!confirm(`Biztosan törlöd?
+
+${data.drink_name}
+-${data.points} pont`))return;
+
+  const {error:delErr}=await sb.from('drinks').delete().eq('id',id);
+  if(delErr)return alert(delErr.message);
+
   try{
-    if(data.photo_url){
-      const marker='/drink-photos/';const pos=data.photo_url.indexOf(marker);
-      if(pos>=0){const path=decodeURIComponent(data.photo_url.slice(pos+marker.length));await sb.storage.from('drink-photos').remove([path])}
+    if(data.photo_key){
+      await deleteR2Object(data.photo_key);
+    }else if(data.photo_url){
+      // Régi, Supabase Storage-ban maradt V4.3 előtti kép
+      const marker='/drink-photos/';
+      const pos=data.photo_url.indexOf(marker);
+      if(pos>=0){
+        const path=decodeURIComponent(data.photo_url.slice(pos+marker.length));
+        await sb.storage.from('drink-photos').remove([path]);
+      }
     }
-  }catch(e){console.warn('Képtörlés:',e)}
-  await loadProfile();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
+  }catch(e){
+    console.warn('A kép rekordja törölve, de a tárhelyfájl törlése nem sikerült:',e);
+  }
+  await loadProfile();
+  await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
 }
 function openImage(encoded){$('modalImage').src=decodeURIComponent(encoded);show('imageModal')}
 function closeImageModal(e,force=false){if(force||e.target.id==='imageModal')hide('imageModal')}
@@ -450,13 +545,45 @@ function constrainCrop(){if(!crop.img)return;const c=$('cropCanvas'),w=crop.img.
 function drawCrop(){if(!crop.img)return;const c=$('cropCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(crop.img,crop.x,crop.y,crop.img.naturalWidth*crop.scale,crop.img.naturalHeight*crop.scale)}
 $('cropZoom').addEventListener('input',e=>{if(!crop.img)return;const c=$('cropCanvas'),old=crop.scale,newScale=crop.minScale*Number(e.target.value),cx=(c.width/2-crop.x)/old,cy=(c.height/2-crop.y)/old;crop.scale=newScale;crop.x=c.width/2-cx*newScale;crop.y=c.height/2-cy*newScale;constrainCrop();drawCrop()});
 const cc=$('cropCanvas');cc.addEventListener('pointerdown',e=>{crop.drag=true;crop.lastX=e.clientX;crop.lastY=e.clientY;cc.setPointerCapture(e.pointerId)});cc.addEventListener('pointermove',e=>{if(!crop.drag)return;const r=cc.getBoundingClientRect(),sx=cc.width/r.width,sy=cc.height/r.height;crop.x+=(e.clientX-crop.lastX)*sx;crop.y+=(e.clientY-crop.lastY)*sy;crop.lastX=e.clientX;crop.lastY=e.clientY;constrainCrop();drawCrop()});cc.addEventListener('pointerup',()=>crop.drag=false);cc.addEventListener('pointercancel',()=>crop.drag=false);
-function applyCrop(){cc.toBlob(blob=>{if(blob){croppedAvatarBlob=blob;$('profileAvatar').src=URL.createObjectURL(blob);hide('cropModal');message('profileMsg','Kivágás elkészült. Mentsd a profilt.')}},'image/jpeg',.9)}
+function applyCrop(){cc.toBlob(blob=>{if(blob){croppedAvatarBlob=blob;$('profileAvatar').src=URL.createObjectURL(blob);hide('cropModal');message('profileMsg','Kivágás elkészült. Mentsd a profilt.')}},'image/webp',.86)}
 function cancelCrop(){hide('cropModal');$('avatarFile').value=''}
 async function saveProfile(){
-  const name=$('profileName').value.trim();if(!name)return message('profileMsg','Adj meg nevet.',true);let avatar=currentProfile?.avatar_url||null;
-  if(croppedAvatarBlob){const path=`${currentUser.id}/${crypto.randomUUID()}.jpg`;const {error}=await sb.storage.from('avatars').upload(path,croppedAvatarBlob,{contentType:'image/jpeg'});if(error)return message('profileMsg',error.message,true);avatar=sb.storage.from('avatars').getPublicUrl(path).data.publicUrl}
-  const {error}=await sb.from('profiles').update({display_name:name,avatar_url:avatar}).eq('id',currentUser.id);if(error)return message('profileMsg',error.message,true);
-  croppedAvatarBlob=null;$('avatarFile').value='';message('profileMsg','Profil mentve.');await loadProfile();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
+  const name=$('profileName').value.trim();
+  if(!name)return message('profileMsg','Adj meg nevet.',true);
+
+  let avatar=currentProfile?.avatar_url||null;
+  let avatarKey=currentProfile?.avatar_key||null;
+  const oldAvatarKey=currentProfile?.avatar_key||null;
+  let newUpload=null;
+
+  try{
+    if(croppedAvatarBlob){
+      message('profileMsg','Profilkép feltöltése Cloudflare R2-re...');
+      newUpload=await uploadBlobToR2(croppedAvatarBlob,'avatar');
+      avatar=newUpload.url;
+      avatarKey=newUpload.key;
+    }
+
+    const {error}=await sb.from('profiles')
+      .update({display_name:name,avatar_url:avatar,avatar_key:avatarKey})
+      .eq('id',currentUser.id);
+    if(error){
+      if(newUpload)try{await deleteR2Object(newUpload.key)}catch(_){}
+      throw error;
+    }
+
+    if(newUpload&&oldAvatarKey&&oldAvatarKey!==newUpload.key){
+      try{await deleteR2Object(oldAvatarKey)}catch(e){console.warn('Régi avatar törlése:',e)}
+    }
+
+    croppedAvatarBlob=null;$('avatarFile').value='';
+    message('profileMsg','Profil mentve.');
+    await loadProfile();
+    await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
+  }catch(e){
+    console.error(e);
+    message('profileMsg',e.message||String(e),true);
+  }
 }
 
 async function loadAdmin(){await Promise.all([loadAdminCategories(),loadAdminUsers()])}
