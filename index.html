@@ -3,200 +3,466 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ItalPont 2.0</title>
+<title>ItalPont V4</title>
 <style>
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#0c0f14;color:#f7f7fb}button,input,select{font:inherit}button{cursor:pointer}
-header{position:sticky;top:0;z-index:20;background:linear-gradient(135deg,#6d28d9,#db2777);box-shadow:0 8px 30px #0007}header .wrap{max-width:1100px;margin:auto;padding:18px}header h1{margin:0;font-size:26px}header p{margin:4px 0 0;color:#f4eefe}
-main{max-width:1100px;margin:auto;padding:18px}.card{background:#171a22;border:1px solid #2a2e39;border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 10px 30px #0003}.hidden{display:none!important}.muted{color:#a7acb8;font-size:13px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
-input,select{width:100%;padding:12px 13px;border:1px solid #353b49;border-radius:12px;background:#0f131a;color:white;outline:none}input:focus,select:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px #8b5cf622}.btn,button{border:0;border-radius:12px;padding:12px 14px;background:#7c3aed;color:white;font-weight:700}.secondary{background:#303644}.danger{background:#be123c}.success-btn{background:#047857}.small-btn{padding:8px 10px;font-size:13px}.msg{margin-top:12px;padding:10px 12px;border-radius:12px;background:#262b36}.msg.success{background:#123d2b}.msg.error{background:#4d172b}
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px}.profilebox{display:flex;align-items:center;gap:12px}.avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#2a3040;border:2px solid #514267}.avatar.sm{width:34px;height:34px}.avatar.lg{width:88px;height:88px}.score{font-weight:800}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tab{background:#262b36}.tab.active{background:#7c3aed}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:520px}th,td{padding:11px 10px;border-bottom:1px solid #2a2e39;text-align:left}.rank{font-weight:900;font-size:17px}.leader-name{display:flex;align-items:center;gap:10px}.pill{display:inline-block;border-radius:999px;padding:4px 9px;background:#2e2744;color:#ddd0ff;font-size:12px}
-.feed{display:grid;gap:12px}.drink{display:flex;gap:14px;align-items:center;background:#12161d;border:1px solid #292f3a;border-radius:14px;padding:12px}.drink-photo{width:92px;height:92px;object-fit:cover;border-radius:12px;cursor:zoom-in;background:#222831}.drink-main{flex:1}.drink-title{font-weight:800;font-size:17px}.drink-meta{margin-top:6px}.admin-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}.category-row{display:grid;grid-template-columns:1fr 120px 110px;gap:8px;align-items:center;margin-bottom:8px}.user-row{display:grid;grid-template-columns:1fr 100px 90px;gap:8px;align-items:center;margin-bottom:8px}.notice{padding:10px 12px;border-left:4px solid #8b5cf6;background:#211d2d;border-radius:10px}.section-title{display:flex;justify-content:space-between;gap:10px;align-items:center}.badge{font-size:11px;padding:3px 7px;border-radius:999px;background:#3a2d14;color:#fde68a}
-#imageModal{position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;z-index:100;padding:18px}#imageModal img{max-width:96vw;max-height:90vh;object-fit:contain;touch-action:pinch-zoom;border-radius:12px;box-shadow:0 20px 80px #000}#imageModal .close{position:absolute;right:18px;top:18px;width:46px;height:46px;border-radius:50%;font-size:24px;background:#ffffff22}
-@media(max-width:760px){header{position:static}.admin-grid{grid-template-columns:1fr}.category-row{grid-template-columns:1fr 88px}.category-row button{grid-column:1/-1}.user-row{grid-template-columns:1fr 88px}.user-row button{grid-column:1/-1}.drink-photo{width:78px;height:78px}.topbar{align-items:flex-start}}
+:root{
+  --bg:#0b0d10;--panel:#17191e;--panel2:#1d2026;--line:#2a2e36;
+  --text:#f7f7f8;--muted:#9ca3af;--yellow:#fbbf24;--purple:#8b5cf6;
+  --red:#dc2626;--green:#059669;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(circle at top,#1a1d25 0,#0b0d10 40%);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.shell{max-width:1540px;margin:auto;padding:0 16px 28px}
+.hero{
+  margin-top:0;min-height:315px;border-radius:0 0 22px 22px;
+  background:
+    linear-gradient(to bottom,rgba(0,0,0,.03),rgba(0,0,0,.10)),
+    url("assets/kulturfarm-banner.jpg") center 42%/cover no-repeat;
+  border:1px solid #3a3d44;border-top:0;box-shadow:0 16px 50px #0008;position:relative;overflow:hidden
+}
+.hero:after{content:"";position:absolute;inset:auto 0 0;height:80px;background:linear-gradient(transparent,#0b0d10dd)}
+.navbar{
+  position:sticky;top:0;z-index:40;margin-top:-1px;background:#111317ee;backdrop-filter:blur(16px);
+  border:1px solid #2a2d33;border-radius:0 0 18px 18px;display:flex;align-items:center;gap:18px;padding:12px 18px;box-shadow:0 10px 30px #0007
+}
+.brand{display:flex;align-items:center;gap:10px;min-width:250px;font-size:28px;font-weight:900}
+.brand span:first-child{font-size:34px}
+.brand b{border-bottom:3px solid var(--yellow)}
+.navlinks{display:flex;gap:6px;flex:1;justify-content:center;flex-wrap:wrap}
+.navbtn{background:transparent;border:0;color:#c7c9ce;padding:11px 16px;border-radius:10px;font-weight:700}
+.navbtn.active,.navbtn:hover{color:white;background:#20232a}
+.navbtn.active{box-shadow:inset 0 -3px 0 var(--yellow)}
+.user-chip{display:flex;align-items:center;gap:10px;min-width:190px;justify-content:flex-end}
+.avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #555b66;background:#292d35}
+.avatar.sm{width:34px;height:34px}
+.avatar.lg{width:96px;height:96px}
+.muted{color:var(--muted);font-size:13px}
+.page{padding-top:18px}
+.grid-home{display:grid;grid-template-columns:360px minmax(0,1fr) 360px;gap:20px;align-items:start}
+.panel{
+  background:linear-gradient(180deg,#1a1d22,#14171b);border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 14px 38px #0004;overflow:hidden
+}
+.panel-pad{padding:18px}
+.panel h2,.panel h3{margin:0 0 14px}
+.panel-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.section{margin-bottom:18px}
+.score-row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid #282c33}
+.score-row:last-child{border-bottom:0}
+.rank{font-size:18px;font-weight:900;color:#d1d5db;text-align:center}
+.rank.top{color:var(--yellow)}
+.namecell{display:flex;gap:10px;align-items:center;min-width:0}
+.namecell span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.points{font-weight:800}
+.feed-card{display:grid;grid-template-columns:78px 1fr auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid #292d34}
+.feed-card:last-child{border-bottom:0}
+.feed-img{width:78px;height:78px;object-fit:cover;border-radius:10px;background:#222;cursor:zoom-in}
+.feed-title{font-size:18px;font-weight:900;margin-bottom:4px}
+.feed-points{font-size:22px;font-weight:900;color:var(--yellow);text-align:right}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;background:#282330;color:#ded2ff;font-size:12px}
+.quick{display:grid;gap:10px}
+.btn{border:0;border-radius:10px;padding:13px 14px;font-weight:800;color:white;background:linear-gradient(135deg,#805ad5,#9f6dd8)}
+.btn.secondary{background:#24272d;border:1px solid #343840}
+.btn.danger{background:#8f1d2c}
+.btn.green{background:#047857}
+.btn.full{width:100%}
+.btn.small{padding:8px 10px;font-size:13px}
+.control,select,input{
+  width:100%;background:#0f1115;color:white;border:1px solid #343942;border-radius:10px;padding:11px 12px;outline:none
+}
+input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tab{background:#252830;border:0;color:#d2d5db;padding:9px 12px;border-radius:9px;font-weight:800}
+.tab.active{background:#6d4cc7;color:white}
+.historybar{display:grid;grid-template-columns:auto minmax(180px,1fr) auto auto;gap:8px;align-items:end;margin-bottom:12px}
+.period-label{padding:10px 12px;background:#101217;border:1px solid #30343c;border-radius:10px;font-weight:800}
+.card-list{display:grid;gap:10px}
+.item-card{background:#121419;border:1px solid #292d34;border-radius:12px;padding:13px}
+.admin-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+.category-row{display:grid;grid-template-columns:1fr 110px 200px;gap:8px;margin-bottom:8px}
+.user-row{display:grid;grid-template-columns:1fr 110px 90px;gap:8px;align-items:center;margin-bottom:8px}
+.msg{margin-top:10px;padding:10px;border-radius:10px;background:#252932}
+.msg.success{background:#123d2b}.msg.error{background:#4d172b}
+.auth-wrap{max-width:760px;margin:26px auto}
+.auth-hero{height:240px;background:url("assets/kulturfarm-banner.jpg") center/cover;border-radius:18px 18px 0 0}
+.auth-panel{border-radius:0 0 18px 18px}
+.profile-layout{display:grid;grid-template-columns:260px 1fr;gap:20px}
+.profile-box{text-align:center}
+.avatar-edit{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.modal{position:fixed;inset:0;background:#000e;display:flex;align-items:center;justify-content:center;z-index:100;padding:18px}
+.modal-card{width:min(95vw,560px);max-height:94vh;overflow:auto;background:#171a20;border:1px solid #373b44;border-radius:16px;padding:18px}
+.modal-close{position:absolute;right:18px;top:18px;width:44px;height:44px;border-radius:50%;border:0;background:#ffffff22;color:white;font-size:24px}
+#imageModal img{max-width:96vw;max-height:90vh;object-fit:contain;touch-action:pinch-zoom;border-radius:12px}
+.crop-wrap{display:flex;justify-content:center;margin:12px 0}.crop-canvas{width:min(80vw,360px);height:min(80vw,360px);max-width:360px;max-height:360px;background:#090b0f;border-radius:12px;touch-action:none}
+.zoom-row{display:grid;grid-template-columns:55px 1fr;gap:10px;align-items:center}
+.badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#3a2d14;color:#fde68a;font-size:11px}
+.mobile-only{display:none}
+@media(max-width:1150px){.grid-home{grid-template-columns:320px 1fr}.rightcol{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:20px}.navbar{flex-wrap:wrap}.brand{min-width:auto}.user-chip{min-width:auto}.navlinks{order:3;width:100%}}
+@media(max-width:760px){
+  .shell{padding:0 10px 20px}.hero{min-height:210px;background-position:center}.navbar{position:static;padding:10px}.brand{font-size:22px}.brand span:first-child{font-size:28px}
+  .user-chip .who{display:none}.navlinks{justify-content:flex-start;overflow:auto;flex-wrap:nowrap}.navbtn{white-space:nowrap}
+  .grid-home{grid-template-columns:1fr}.rightcol{grid-column:auto;grid-template-columns:1fr}.historybar{grid-template-columns:1fr 1fr}.historybar .datebox,.period-label{grid-column:1/-1}
+  .admin-grid,.profile-layout{grid-template-columns:1fr}.category-row{grid-template-columns:1fr 90px}.category-row .actions{grid-column:1/-1}.user-row{grid-template-columns:1fr 90px}.user-row button{grid-column:1/-1}
+  .feed-card{grid-template-columns:68px 1fr}.feed-img{width:68px;height:68px}.feed-points{grid-column:2;text-align:left;font-size:18px}
+}
 </style>
 </head>
 <body>
-<header><div class="wrap"><h1>🍻 ItalPont 2.0</h1><p>Fotózz, pontozz, versenyezz a barátaiddal.</p></div></header>
-<main>
-<section id="configWarning" class="card hidden"><div class="notice"><b>Beállítás szükséges:</b> írd be a saját Supabase Project URL és anon public key értékeidet az <code>index.html</code> fájlban.</div></section>
-<section id="auth" class="card">
-  <h2>Belépés / regisztráció</h2>
-  <div class="grid">
-    <div><label>Email</label><input id="email" type="email" autocomplete="email" placeholder="te@email.hu"></div>
-    <div><label>Jelszó</label><input id="password" type="password" autocomplete="current-password" placeholder="legalább 6 karakter"></div>
-    <div><label>Megjelenített név</label><input id="displayName" placeholder="pl. Zoli"></div>
-  </div>
-  <div class="row" style="margin-top:12px"><button onclick="register()">Regisztráció</button><button class="secondary" onclick="login()">Belépés</button></div>
-  <div id="authMsg" class="msg hidden"></div>
-</section>
-
-<section id="app" class="hidden">
-  <div class="card topbar">
-    <div class="profilebox"><img id="myAvatar" class="avatar" alt="profilkép"><div><div id="hello" style="font-weight:800"></div><div id="myPoints" class="muted"></div><div id="roleBadge" class="badge hidden">ADMIN</div></div></div>
-    <div class="row" style="max-width:360px"><button class="secondary" onclick="toggleProfile()">Profil</button><button class="secondary" onclick="logout()">Kilépés</button></div>
-  </div>
-
-  <div id="profilePanel" class="card hidden">
-    <h2>👤 Profil</h2>
-    <div class="grid">
-      <div><label>Megjelenített név</label><input id="profileName"></div>
-      <div><label>Profilkép feltöltése</label><input id="avatarFile" type="file" accept="image/*" capture="user"></div>
-    </div>
-    <button style="margin-top:12px" onclick="saveProfile()">Profil mentése</button>
-    <div id="profileMsg" class="msg hidden"></div>
-  </div>
-
-  <div class="card">
-    <h2>📸 Új ital feltöltése</h2>
-    <div class="grid">
-      <div><label>Ital neve</label><input id="drinkName" placeholder="pl. Jägermeister"></div>
-      <div><label>Kategória</label><select id="category"></select></div>
-      <div><label>Fotó</label><input id="photo" type="file" accept="image/*" capture="environment"></div>
-    </div>
-    <button style="margin-top:12px" onclick="uploadDrink()">Pont hozzáadása</button>
-    <div id="uploadMsg" class="msg hidden"></div>
-  </div>
-
-  <div class="card">
-    <div class="section-title"><h2>🏆 Ranglista</h2><div class="muted">A pontok a feltöltések dátuma alapján számolódnak.</div></div>
-    <div class="tabs">
-      <button class="tab active" data-period="week" onclick="setPeriod('week',this)">Heti</button>
-      <button class="tab" data-period="month" onclick="setPeriod('month',this)">Havi</button>
-      <button class="tab" data-period="year" onclick="setPeriod('year',this)">Éves</button>
-      <button class="tab" data-period="all" onclick="setPeriod('all',this)">Összesített</button>
-    </div>
-    <div id="leaderboard"></div>
-  </div>
-
-  <div class="card">
-    <h2>📷 Legutóbbi italok</h2>
-    <div id="drinks" class="feed"></div>
-  </div>
-
-  <div id="adminPanel" class="card hidden">
-    <div class="section-title"><h2>🛠️ Admin</h2><span class="badge">csak adminnak</span></div>
-    <div class="admin-grid">
-      <div>
-        <h3>Kategóriák</h3>
-        <div id="adminCategories"></div>
-        <div class="grid" style="margin-top:12px"><input id="newCategoryName" placeholder="Új kategória neve"><input id="newCategoryPoints" type="number" min="0" step="1" placeholder="Pont"></div>
-        <button style="margin-top:10px" onclick="addCategory()">Kategória hozzáadása</button>
-        <div id="adminMsg" class="msg hidden"></div>
-      </div>
-      <div>
-        <h3>Felhasználók</h3>
-        <div class="muted" style="margin-bottom:10px">Admin jogosultság ki-/bekapcsolható. Saját admin jogodat nem veheted el itt.</div>
-        <div id="adminUsers"></div>
+<div id="publicAuth">
+  <div class="shell auth-wrap">
+    <div class="auth-hero"></div>
+    <div class="panel auth-panel">
+      <div class="panel-pad">
+        <h1>🍺 ItalPont V4</h1>
+        <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
+        <div class="form-grid">
+          <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
+          <div><label>Jelszó</label><input id="password" type="password" autocomplete="current-password"></div>
+          <div><label>Megjelenített név</label><input id="displayName"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px"><button class="btn full" onclick="login()">Belépés</button><button class="btn secondary full" onclick="register()">Regisztráció</button></div>
+        <div id="authMsg" class="msg hidden"></div>
       </div>
     </div>
   </div>
-</section>
-</main>
+</div>
 
-<div id="imageModal" class="hidden" onclick="closeImageModal(event)"><button class="close" aria-label="bezárás" onclick="closeImageModal(event,true)">×</button><img id="modalImage" alt="Nagyított ital fotó"></div>
+<div id="app" class="hidden">
+  <div class="shell">
+    <div class="hero"></div>
+    <div class="navbar">
+      <div class="brand"><span>🍺</span><b>ItalPont</b></div>
+      <div class="navlinks">
+        <button class="navbtn active" data-page="home" onclick="showPage('home',this)">🏠 Főoldal</button>
+        <button class="navbtn" data-page="leader" onclick="showPage('leader',this)">🏆 Ranglisták</button>
+        <button class="navbtn" data-page="upload" onclick="showPage('upload',this)">➕ Feltöltés</button>
+        <button class="navbtn" data-page="profile" onclick="showPage('profile',this)">👤 Profilom</button>
+        <button id="adminNav" class="navbtn hidden" data-page="admin" onclick="showPage('admin',this)">🛠️ Admin</button>
+      </div>
+      <div class="user-chip">
+        <img id="navAvatar" class="avatar" alt="profil">
+        <div class="who"><b id="navName"></b><div id="navPoints" class="muted"></div></div>
+        <button class="navbtn" onclick="logout()">↪</button>
+      </div>
+    </div>
+
+    <main class="page">
+      <section id="page-home">
+        <div class="grid-home">
+          <div class="leftcol">
+            <div class="panel section"><div class="panel-pad">
+              <div class="panel-title"><h3>📊 Összesített ranglista</h3></div>
+              <div id="homeOverall"></div>
+              <button class="btn secondary full" style="margin-top:12px" onclick="openLeaderPage('all')">Teljes ranglista ›</button>
+            </div></div>
+          </div>
+
+          <div class="midcol">
+            <div class="panel section"><div class="panel-pad">
+              <div class="panel-title"><h3>🍸 Legutóbbi italok</h3><span class="muted">utolsó 8</span></div>
+              <div id="homeFeed"></div>
+              <button class="btn secondary full" style="margin-top:12px" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">+ Ital feltöltése</button>
+            </div></div>
+          </div>
+
+          <div class="rightcol">
+            <div class="panel section"><div class="panel-pad">
+              <h3>⚡ Gyors műveletek</h3>
+              <div class="quick">
+                <button class="btn full" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">＋ Ital feltöltése</button>
+                <button class="btn secondary full" onclick="showPage('profile',document.querySelector('[data-page=profile]'))">👤 Profil szerkesztése</button>
+              </div>
+            </div></div>
+            <div class="panel section"><div class="panel-pad">
+              <div class="panel-title"><h3>🗓️ Heti ranglista</h3><span class="muted" id="homeWeekLabel"></span></div>
+              <div id="homeWeek"></div>
+              <button class="btn secondary full" style="margin-top:12px" onclick="openLeaderPage('week')">Összes heti ranglista ›</button>
+            </div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-leader" class="hidden">
+        <div class="panel"><div class="panel-pad">
+          <h2>🏆 Ranglisták</h2>
+          <div class="tabs">
+            <button class="tab active" data-period="week" onclick="setPeriod('week',this)">Heti</button>
+            <button class="tab" data-period="month" onclick="setPeriod('month',this)">Havi</button>
+            <button class="tab" data-period="year" onclick="setPeriod('year',this)">Éves</button>
+            <button class="tab" data-period="all" onclick="setPeriod('all',this)">Összesített</button>
+          </div>
+          <div id="historyControls" class="historybar">
+            <button class="btn secondary" onclick="shiftPeriod(-1)">← Előző</button>
+            <div class="datebox"><label class="muted">Dátum</label><input id="leaderDate" type="date" onchange="changeLeaderDate()"></div>
+            <button class="btn secondary" onclick="goCurrentPeriod()">Aktuális</button>
+            <button class="btn secondary" onclick="shiftPeriod(1)">Következő →</button>
+          </div>
+          <div id="periodLabel" class="period-label"></div>
+          <div id="leaderboard" style="margin-top:12px"></div>
+        </div></div>
+      </section>
+
+      <section id="page-upload" class="hidden">
+        <div class="panel"><div class="panel-pad">
+          <h2>➕ Ital feltöltése</h2>
+          <div class="form-grid">
+            <div><label>Ital neve</label><input id="drinkName" placeholder="pl. Mojito"></div>
+            <div><label>Kategória</label><select id="category"></select></div>
+            <div><label>Fotó</label><input id="photo" type="file" accept="image/*" capture="environment"></div>
+          </div>
+          <button class="btn" style="margin-top:12px" onclick="uploadDrink()">Feltöltés és pont hozzáadása</button>
+          <div id="uploadMsg" class="msg hidden"></div>
+        </div></div>
+        <div class="panel" style="margin-top:18px"><div class="panel-pad">
+          <h3>📷 Legutóbbi feltöltések</h3><div id="allDrinks" class="card-list"></div>
+        </div></div>
+      </section>
+
+      <section id="page-profile" class="hidden">
+        <div class="panel"><div class="panel-pad">
+          <h2>👤 Profilom</h2>
+          <div class="profile-layout">
+            <div class="profile-box">
+              <img id="profileAvatar" class="avatar lg" alt="profilkép">
+              <div style="margin-top:12px"><b id="profileScore"></b></div>
+              <div id="roleBadge" class="badge hidden">ADMIN</div>
+            </div>
+            <div>
+              <div class="form-grid">
+                <div><label>Megjelenített név</label><input id="profileName"></div>
+                <div><label>Új profilkép</label><input id="avatarFile" type="file" accept="image/*" capture="user"><div class="muted" style="margin-top:5px">Kiválasztás után megnyílik a cropper.</div></div>
+              </div>
+              <button class="btn" style="margin-top:12px" onclick="saveProfile()">Profil mentése</button>
+              <div id="profileMsg" class="msg hidden"></div>
+            </div>
+          </div>
+        </div></div>
+      </section>
+
+      <section id="page-admin" class="hidden">
+        <div class="panel"><div class="panel-pad">
+          <h2>🛠️ Admin</h2>
+          <div class="admin-grid">
+            <div>
+              <h3>Kategóriák</h3>
+              <div id="adminCategories"></div>
+              <div class="form-grid" style="margin-top:12px">
+                <input id="newCategoryName" placeholder="Új kategória (emoji is mehet)">
+                <input id="newCategoryPoints" type="number" min="0" step="1" placeholder="Pont">
+              </div>
+              <button class="btn" style="margin-top:10px" onclick="addCategory()">Kategória hozzáadása</button>
+              <div id="adminMsg" class="msg hidden"></div>
+            </div>
+            <div>
+              <h3>Felhasználók</h3>
+              <div id="adminUsers"></div>
+            </div>
+          </div>
+        </div></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="imageModal" class="modal hidden" onclick="closeImageModal(event)">
+  <button class="modal-close" onclick="closeImageModal(event,true)">×</button>
+  <img id="modalImage" alt="nagyított ital">
+</div>
+
+<div id="cropModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 style="margin-top:0">✂️ Profilkép vágása</h2>
+    <div class="muted">Húzd a képet, majd állítsd a zoomot.</div>
+    <div class="crop-wrap"><canvas id="cropCanvas" class="crop-canvas" width="512" height="512"></canvas></div>
+    <div class="zoom-row"><span>Zoom</span><input id="cropZoom" type="range" min="1" max="3" step="0.01" value="1"></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn full" onclick="applyCrop()">Kivágás használata</button>
+      <button class="btn secondary full" onclick="cancelCrop()">Mégse</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL = "https://wqtldrwvharmlkqqfdmk.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_oCTAIcer2GaXeokcd6JN8A_ulUZh8QN";
-
-let sb=null,currentUser=null,currentProfile=null,currentPeriod='week',categories=[];
+const SUPABASE_URL="IDE_A_SUPABASE_PROJECT_URL";
+const SUPABASE_ANON_KEY="IDE_A_SUPABASE_ANON_PUBLIC_KEY";
+let sb=null,currentUser=null,currentProfile=null,categories=[],currentPeriod='week',selectedLeaderDate=new Date();
+let croppedAvatarBlob=null,cropObjectUrl=null;
+const crop={img:null,minScale:1,scale:1,x:0,y:0,drag:false,lastX:0,lastY:0};
 const $=id=>document.getElementById(id);
 const configured=!SUPABASE_URL.startsWith('IDE_')&&!SUPABASE_ANON_KEY.startsWith('IDE_');
-if(configured) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); else $('configWarning').classList.remove('hidden');
+if(configured)sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
 function show(id){$(id).classList.remove('hidden')} function hide(id){$(id).classList.add('hidden')}
-function message(id,text,isError=false){$(id).textContent=text;$(id).className='msg '+(isError?'error':'success')}
+function message(id,text,err=false){$(id).textContent=text;$(id).className='msg '+(err?'error':'success')}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-function avatarUrl(url){return url||'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#2b3140"/><circle cx="50" cy="38" r="18" fill="#8b5cf6"/><path d="M18 90c5-25 20-35 32-35s27 10 32 35" fill="#8b5cf6"/></svg>`)}
+function avatarUrl(url){return url||'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#2b3140"/><circle cx="50" cy="38" r="18" fill="#fbbf24"/><path d="M18 90c5-25 20-35 32-35s27 10 32 35" fill="#fbbf24"/></svg>`)}
+function localDateInputValue(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
+function huDate(d){return d.toLocaleDateString('hu-HU',{year:'numeric',month:'2-digit',day:'2-digit'})}
+function showPage(page,btn){
+  document.querySelectorAll('main section[id^=page-]').forEach(x=>x.classList.add('hidden'));
+  show('page-'+page);
+  document.querySelectorAll('.navbtn[data-page]').forEach(x=>x.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  window.scrollTo({top:document.querySelector('.navbar').offsetTop,behavior:'smooth'});
+}
+function openLeaderPage(period){
+  showPage('leader',document.querySelector('[data-page=leader]'));
+  const b=document.querySelector(`.tab[data-period="${period}"]`);setPeriod(period,b);
+}
 
 async function register(){
-  if(!sb)return message('authMsg','Előbb add meg a Supabase beállításokat az index.html-ben.',true);
+  if(!sb)return message('authMsg','Előbb add meg a Supabase URL-t és anon kulcsot az index.html-ben.',true);
   const email=$('email').value.trim(),password=$('password').value,name=$('displayName').value.trim();
   if(!email||password.length<6||!name)return message('authMsg','Tölts ki minden mezőt; a jelszó legalább 6 karakter legyen.',true);
   const {error}=await sb.auth.signUp({email,password,options:{data:{display_name:name}}});
   if(error)return message('authMsg',error.message,true);
-  message('authMsg','Sikeres regisztráció. Ha email-megerősítés aktív, ellenőrizd a levelezésed.');
+  message('authMsg','Regisztráció sikeres. Ha email-megerősítés aktív, ellenőrizd a levelezésed.');
 }
 async function login(){
   if(!sb)return message('authMsg','Előbb add meg a Supabase beállításokat.',true);
   const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
-  if(error)return message('authMsg',error.message,true); await start();
+  if(error)return message('authMsg',error.message,true);
+  await start();
 }
 async function logout(){if(sb)await sb.auth.signOut();location.reload()}
 
 async function start(){
-  if(!sb)return; const {data:{session}}=await sb.auth.getSession(); if(!session){show('auth');hide('app');return}
-  currentUser=session.user; hide('auth');show('app');
-  await loadProfile(); await loadCategories(); await loadLeaderboard(); await loadDrinks();
-  if(currentProfile?.is_admin){show('adminPanel');show('roleBadge');await loadAdmin()}else{hide('adminPanel');hide('roleBadge')}
+  if(!sb)return;
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){show('publicAuth');hide('app');return}
+  currentUser=session.user;hide('publicAuth');show('app');
+  $('leaderDate').value=localDateInputValue(selectedLeaderDate);
+  await loadProfile();await loadCategories();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
+  if(currentProfile?.is_admin){show('adminNav');show('roleBadge');await loadAdmin()}else{hide('adminNav');hide('roleBadge')}
 }
 async function loadProfile(){
-  const {data,error}=await sb.from('profiles').select('*').eq('id',currentUser.id).single(); if(error){console.error(error);return}
-  currentProfile=data; $('hello').textContent='Szia, '+(data.display_name||'Játékos')+'! 👋'; $('myPoints').textContent='Összes pont: '+(data.points||0); $('myAvatar').src=avatarUrl(data.avatar_url); $('profileName').value=data.display_name||'';
-}
-function toggleProfile(){$('profilePanel').classList.toggle('hidden')}
-async function saveProfile(){
-  const name=$('profileName').value.trim(); if(!name)return message('profileMsg','Adj meg megjelenített nevet.',true);
-  let avatar=currentProfile?.avatar_url||null; const file=$('avatarFile').files[0];
-  if(file){const ext=(file.name.split('.').pop()||'jpg').toLowerCase();const path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;const {error}=await sb.storage.from('avatars').upload(path,file,{contentType:file.type});if(error)return message('profileMsg',error.message,true);avatar=sb.storage.from('avatars').getPublicUrl(path).data.publicUrl}
-  const {error}=await sb.from('profiles').update({display_name:name,avatar_url:avatar}).eq('id',currentUser.id); if(error)return message('profileMsg',error.message,true);
-  message('profileMsg','Profil mentve.'); $('avatarFile').value=''; await loadProfile(); await loadLeaderboard(); await loadDrinks();
+  const {data,error}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+  if(error)return console.error(error);
+  currentProfile=data;
+  $('navAvatar').src=avatarUrl(data.avatar_url);$('navName').textContent=data.display_name||'Játékos';$('navPoints').textContent=(data.points||0)+' pont';
+  $('profileAvatar').src=avatarUrl(data.avatar_url);$('profileName').value=data.display_name||'';$('profileScore').textContent=(data.points||0)+' összpont';
 }
 
 async function loadCategories(){
-  const {data,error}=await sb.from('categories').select('*').order('sort_order',{ascending:true}).order('name',{ascending:true}); if(error){console.error(error);return}
-  categories=data||[]; $('category').innerHTML=categories.map(c=>`<option value="${c.id}">${esc(c.name)} — ${c.points} pont</option>`).join('');
+  const {data,error}=await sb.from('categories').select('*').order('sort_order',{ascending:true}).order('name',{ascending:true});
+  if(error)return console.error(error);categories=data||[];
+  $('category').innerHTML=categories.map(c=>`<option value="${c.id}">${esc(c.name)} — ${c.points} pont</option>`).join('');
 }
 
-function periodStart(period){
-  const now=new Date(); if(period==='all')return null;
-  if(period==='week'){const d=new Date(now);const day=(d.getDay()+6)%7;d.setHours(0,0,0,0);d.setDate(d.getDate()-day);return d.toISOString()}
-  if(period==='month')return new Date(now.getFullYear(),now.getMonth(),1).toISOString();
-  if(period==='year')return new Date(now.getFullYear(),0,1).toISOString();
+function periodBounds(period,ref){
+  if(period==='all')return {start:null,end:null,label:'Összesített ranglista'};
+  const d=new Date(ref);d.setHours(0,0,0,0);let start,end,label;
+  if(period==='week'){const day=(d.getDay()+6)%7;start=new Date(d);start.setDate(start.getDate()-day);end=new Date(start);end.setDate(end.getDate()+7);let last=new Date(end);last.setDate(last.getDate()-1);label=`${huDate(start)} – ${huDate(last)}`}
+  else if(period==='month'){start=new Date(d.getFullYear(),d.getMonth(),1);end=new Date(d.getFullYear(),d.getMonth()+1,1);label=start.toLocaleDateString('hu-HU',{year:'numeric',month:'long'})}
+  else{start=new Date(d.getFullYear(),0,1);end=new Date(d.getFullYear()+1,0,1);label=`${d.getFullYear()}. év`}
+  return {start:start.toISOString(),end:end.toISOString(),label};
 }
-async function setPeriod(period,btn){currentPeriod=period;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');await loadLeaderboard()}
-async function loadLeaderboard(){
-  let q=sb.from('drinks').select('user_id,points,created_at,profiles(display_name,avatar_url)');const start=periodStart(currentPeriod);if(start)q=q.gte('created_at',start);const {data,error}=await q;if(error)return $('leaderboard').textContent=error.message;
-  const map=new Map();(data||[]).forEach(d=>{const p=map.get(d.user_id)||{user_id:d.user_id,name:d.profiles?.display_name||'Névtelen',avatar:d.profiles?.avatar_url||null,points:0};p.points+=Number(d.points)||0;map.set(d.user_id,p)});
-  if(currentPeriod==='all'){
-    const {data:profiles}=await sb.from('profiles').select('id,display_name,avatar_url,points');(profiles||[]).forEach(p=>{if(!map.has(p.id))map.set(p.id,{user_id:p.id,name:p.display_name||'Névtelen',avatar:p.avatar_url,points:p.points||0});else map.get(p.id).points=p.points||0})
-  }
-  const rows=[...map.values()].sort((a,b)=>b.points-a.points);
-  $('leaderboard').innerHTML=`<div class="table-wrap"><table><thead><tr><th>#</th><th>Játékos</th><th>Pont</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td class="rank">${i+1}.</td><td><div class="leader-name"><img class="avatar sm" src="${avatarUrl(x.avatar)}"><span>${esc(x.name)}</span></div></td><td><b>${x.points}</b></td></tr>`).join('')}</tbody></table></div>`+(rows.length?'':'<p class="muted">Ebben az időszakban még nincs pont.</p>');
+async function fetchLeaderboard(period='all',ref=new Date()){
+  const bounds=periodBounds(period,ref);
+  let q=sb.from('drinks').select('user_id,points,created_at,profiles(display_name,avatar_url)');
+  if(bounds.start)q=q.gte('created_at',bounds.start).lt('created_at',bounds.end);
+  const {data,error}=await q;if(error)throw error;
+  const map=new Map();
+  (data||[]).forEach(d=>{const p=map.get(d.user_id)||{id:d.user_id,name:d.profiles?.display_name||'Névtelen',avatar:d.profiles?.avatar_url||null,points:0};p.points+=Number(d.points)||0;map.set(d.user_id,p)});
+  if(period==='all'){const {data:profiles}=await sb.from('profiles').select('id,display_name,avatar_url,points');(profiles||[]).forEach(p=>map.set(p.id,{id:p.id,name:p.display_name||'Névtelen',avatar:p.avatar_url,points:p.points||0}))}
+  return {rows:[...map.values()].sort((a,b)=>b.points-a.points||a.name.localeCompare(b.name,'hu')),label:bounds.label};
 }
+function rankRows(rows,limit=null){
+  const arr=limit?rows.slice(0,limit):rows;
+  return arr.map((x,i)=>`<div class="score-row"><div class="rank ${i<3?'top':''}">${i+1}</div><div class="namecell"><img class="avatar sm" src="${avatarUrl(x.avatar)}"><span>${esc(x.name)}</span></div><div class="points">${x.points} pont</div></div>`).join('')||'<div class="muted">Nincs adat.</div>';
+}
+async function loadHome(){
+  try{
+    const [all,week]=await Promise.all([fetchLeaderboard('all'),fetchLeaderboard('week')]);
+    $('homeOverall').innerHTML=rankRows(all.rows,5);$('homeWeek').innerHTML=rankRows(week.rows,3);$('homeWeekLabel').textContent=week.label;
+    const {data}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(8);
+    $('homeFeed').innerHTML=(data||[]).map(feedHtml).join('')||'<div class="muted">Még nincs feltöltött ital.</div>';
+  }catch(e){console.error(e)}
+}
+async function setPeriod(period,btn){
+  currentPeriod=period;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');
+  $('historyControls').classList.toggle('hidden',period==='all');await loadLeaderboard();
+}
+function changeLeaderDate(){const v=$('leaderDate').value;if(v){selectedLeaderDate=new Date(v+'T12:00:00');loadLeaderboard()}}
+function goCurrentPeriod(){selectedLeaderDate=new Date();$('leaderDate').value=localDateInputValue(selectedLeaderDate);loadLeaderboard()}
+function shiftPeriod(dir){if(currentPeriod==='all')return;const d=new Date(selectedLeaderDate);if(currentPeriod==='week')d.setDate(d.getDate()+7*dir);if(currentPeriod==='month')d.setMonth(d.getMonth()+dir);if(currentPeriod==='year')d.setFullYear(d.getFullYear()+dir);selectedLeaderDate=d;$('leaderDate').value=localDateInputValue(d);loadLeaderboard()}
+async function loadLeaderboard(){try{const r=await fetchLeaderboard(currentPeriod,selectedLeaderDate);$('periodLabel').textContent=r.label;$('leaderboard').innerHTML=rankRows(r.rows)}catch(e){$('leaderboard').textContent=e.message}}
 
-async function uploadDrink(){
-  const name=$('drinkName').value.trim(),file=$('photo').files[0],catId=Number($('category').value); if(!name||!file||!catId)return message('uploadMsg','Adj meg italnevet, kategóriát és fotót.',true);
-  const cat=categories.find(c=>Number(c.id)===catId); if(!cat)return message('uploadMsg','Érvénytelen kategória.',true); message('uploadMsg','Feltöltés...');
-  const ext=(file.name.split('.').pop()||'jpg').toLowerCase(),path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`; const {error:upErr}=await sb.storage.from('drink-photos').upload(path,file,{contentType:file.type});if(upErr)return message('uploadMsg',upErr.message,true);
-  const photoUrl=sb.storage.from('drink-photos').getPublicUrl(path).data.publicUrl; const {error}=await sb.from('drinks').insert({user_id:currentUser.id,drink_name:name,category_id:cat.id,category_name:cat.name,points:cat.points,photo_url:photoUrl}); if(error)return message('uploadMsg',error.message,true);
-  $('drinkName').value='';$('photo').value='';message('uploadMsg',`+${cat.points} pont!`);await loadProfile();await loadLeaderboard();await loadDrinks();
+function feedHtml(d){
+  const adminDelete=currentProfile?.is_admin?`<button class="btn danger small" style="margin-top:8px" onclick="deleteDrink(${d.id},event)">🗑️ Törlés</button>`:'';
+  return `<div class="feed-card"><img class="feed-img" src="${d.photo_url}" onclick="openImage('${encodeURIComponent(d.photo_url)}')"><div><div class="feed-title">${esc(d.category_name||'Ital')}</div><div class="muted">${esc(d.drink_name)} · ${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</div>${adminDelete}</div><div class="feed-points">+${d.points}<div class="muted">pont</div></div></div>`;
 }
 async function loadDrinks(){
-  const {data,error}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(50);if(error)return $('drinks').textContent=error.message;
-  $('drinks').innerHTML=(data||[]).map(d=>`<div class="drink"><img class="drink-photo" src="${d.photo_url}" alt="${esc(d.drink_name)}" onclick="openImage('${encodeURIComponent(d.photo_url)}')"><div class="drink-main"><div class="drink-title">${esc(d.drink_name)}</div><div class="drink-meta"><span class="pill">${esc(d.category_name||'Kategória')}</span> <b>+${d.points} pont</b></div><div class="leader-name muted" style="margin-top:8px"><img class="avatar sm" src="${avatarUrl(d.profiles?.avatar_url)}"><span>${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</span></div></div></div>`).join('')||'<p class="muted">Még nincs feltöltött ital.</p>';
+  const {data,error}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(60);
+  if(error)return $('allDrinks').textContent=error.message;
+  $('allDrinks').innerHTML=(data||[]).map(d=>`<div class="item-card">${feedHtml(d)}</div>`).join('')||'<div class="muted">Nincs feltöltés.</div>';
+}
+async function uploadDrink(){
+  const name=$('drinkName').value.trim(),file=$('photo').files[0],catId=Number($('category').value);
+  if(!name||!file||!catId)return message('uploadMsg','Adj meg italnevet, kategóriát és fotót.',true);
+  const cat=categories.find(c=>Number(c.id)===catId);if(!cat)return message('uploadMsg','Érvénytelen kategória.',true);
+  message('uploadMsg','Feltöltés...');
+  const ext=(file.name.split('.').pop()||'jpg').toLowerCase(),path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+  const {error:upErr}=await sb.storage.from('drink-photos').upload(path,file,{contentType:file.type});if(upErr)return message('uploadMsg',upErr.message,true);
+  const photoUrl=sb.storage.from('drink-photos').getPublicUrl(path).data.publicUrl;
+  const {error}=await sb.from('drinks').insert({user_id:currentUser.id,drink_name:name,category_id:cat.id,category_name:cat.name,points:cat.points,photo_url:photoUrl});
+  if(error)return message('uploadMsg',error.message,true);
+  $('drinkName').value='';$('photo').value='';message('uploadMsg',`+${cat.points} pont!`);
+  await loadProfile();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
+}
+
+async function deleteDrink(id,event){
+  event?.stopPropagation();
+  if(!currentProfile?.is_admin)return;
+  const {data,error}=await sb.from('drinks').select('id,drink_name,points,photo_url').eq('id',id).single();if(error)return alert(error.message);
+  if(!confirm(`Biztosan törlöd?\n\n${data.drink_name}\n-${data.points} pont`))return;
+  const {error:delErr}=await sb.from('drinks').delete().eq('id',id);if(delErr)return alert(delErr.message);
+  try{
+    if(data.photo_url){
+      const marker='/drink-photos/';const pos=data.photo_url.indexOf(marker);
+      if(pos>=0){const path=decodeURIComponent(data.photo_url.slice(pos+marker.length));await sb.storage.from('drink-photos').remove([path])}
+    }
+  }catch(e){console.warn('Képtörlés:',e)}
+  await loadProfile();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
 }
 function openImage(encoded){$('modalImage').src=decodeURIComponent(encoded);show('imageModal')}
 function closeImageModal(e,force=false){if(force||e.target.id==='imageModal')hide('imageModal')}
 
-async function loadAdmin(){await loadAdminCategories();await loadAdminUsers()}
+$('avatarFile').addEventListener('change',e=>{const file=e.target.files?.[0];if(file)openCropper(file)});
+function openCropper(file){
+  if(cropObjectUrl)URL.revokeObjectURL(cropObjectUrl);cropObjectUrl=URL.createObjectURL(file);const img=new Image();
+  img.onload=()=>{crop.img=img;const c=$('cropCanvas');crop.minScale=Math.max(c.width/img.naturalWidth,c.height/img.naturalHeight);crop.scale=crop.minScale;crop.x=(c.width-img.naturalWidth*crop.scale)/2;crop.y=(c.height-img.naturalHeight*crop.scale)/2;$('cropZoom').value='1';constrainCrop();drawCrop();show('cropModal')};img.src=cropObjectUrl;
+}
+function constrainCrop(){if(!crop.img)return;const c=$('cropCanvas'),w=crop.img.naturalWidth*crop.scale,h=crop.img.naturalHeight*crop.scale;crop.x=Math.min(0,Math.max(c.width-w,crop.x));crop.y=Math.min(0,Math.max(c.height-h,crop.y))}
+function drawCrop(){if(!crop.img)return;const c=$('cropCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(crop.img,crop.x,crop.y,crop.img.naturalWidth*crop.scale,crop.img.naturalHeight*crop.scale)}
+$('cropZoom').addEventListener('input',e=>{if(!crop.img)return;const c=$('cropCanvas'),old=crop.scale,newScale=crop.minScale*Number(e.target.value),cx=(c.width/2-crop.x)/old,cy=(c.height/2-crop.y)/old;crop.scale=newScale;crop.x=c.width/2-cx*newScale;crop.y=c.height/2-cy*newScale;constrainCrop();drawCrop()});
+const cc=$('cropCanvas');cc.addEventListener('pointerdown',e=>{crop.drag=true;crop.lastX=e.clientX;crop.lastY=e.clientY;cc.setPointerCapture(e.pointerId)});cc.addEventListener('pointermove',e=>{if(!crop.drag)return;const r=cc.getBoundingClientRect(),sx=cc.width/r.width,sy=cc.height/r.height;crop.x+=(e.clientX-crop.lastX)*sx;crop.y+=(e.clientY-crop.lastY)*sy;crop.lastX=e.clientX;crop.lastY=e.clientY;constrainCrop();drawCrop()});cc.addEventListener('pointerup',()=>crop.drag=false);cc.addEventListener('pointercancel',()=>crop.drag=false);
+function applyCrop(){cc.toBlob(blob=>{if(blob){croppedAvatarBlob=blob;$('profileAvatar').src=URL.createObjectURL(blob);hide('cropModal');message('profileMsg','Kivágás elkészült. Mentsd a profilt.')}},'image/jpeg',.9)}
+function cancelCrop(){hide('cropModal');$('avatarFile').value=''}
+async function saveProfile(){
+  const name=$('profileName').value.trim();if(!name)return message('profileMsg','Adj meg nevet.',true);let avatar=currentProfile?.avatar_url||null;
+  if(croppedAvatarBlob){const path=`${currentUser.id}/${crypto.randomUUID()}.jpg`;const {error}=await sb.storage.from('avatars').upload(path,croppedAvatarBlob,{contentType:'image/jpeg'});if(error)return message('profileMsg',error.message,true);avatar=sb.storage.from('avatars').getPublicUrl(path).data.publicUrl}
+  const {error}=await sb.from('profiles').update({display_name:name,avatar_url:avatar}).eq('id',currentUser.id);if(error)return message('profileMsg',error.message,true);
+  croppedAvatarBlob=null;$('avatarFile').value='';message('profileMsg','Profil mentve.');await loadProfile();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
+}
+
+async function loadAdmin(){await Promise.all([loadAdminCategories(),loadAdminUsers()])}
 async function loadAdminCategories(){
-  const {data}=await sb.from('categories').select('*').order('sort_order',{ascending:true}).order('name',{ascending:true});
-  $('adminCategories').innerHTML=(data||[]).map(c=>`<div class="category-row"><input id="cat-name-${c.id}" value="${esc(c.name)}"><input id="cat-points-${c.id}" type="number" min="0" step="1" value="${c.points}"><div class="row"><button class="small-btn success-btn" onclick="updateCategory(${c.id})">Mentés</button><button class="small-btn danger" onclick="deleteCategory(${c.id})">Törlés</button></div></div>`).join('')||'<div class="muted">Nincs kategória.</div>';
+  const {data}=await sb.from('categories').select('*').order('sort_order',{ascending:true}).order('name');
+  $('adminCategories').innerHTML=(data||[]).map(c=>`<div class="category-row"><input id="cat-name-${c.id}" value="${esc(c.name)}"><input id="cat-points-${c.id}" type="number" min="0" value="${c.points}"><div class="actions" style="display:flex;gap:8px"><button class="btn green small" onclick="updateCategory(${c.id})">Mentés</button><button class="btn danger small" onclick="deleteCategory(${c.id})">Törlés</button></div></div>`).join('');
 }
-async function addCategory(){
-  const name=$('newCategoryName').value.trim(),points=Number($('newCategoryPoints').value);if(!name||!Number.isFinite(points)||points<0)return message('adminMsg','Adj meg nevet és érvényes pontértéket.',true);
-  const {error}=await sb.from('categories').insert({name,points});if(error)return message('adminMsg',error.message,true);$('newCategoryName').value='';$('newCategoryPoints').value='';message('adminMsg','Kategória hozzáadva.');await loadCategories();await loadAdminCategories();
-}
-async function updateCategory(id){
-  const name=$(`cat-name-${id}`).value.trim(),points=Number($(`cat-points-${id}`).value);const {error}=await sb.from('categories').update({name,points}).eq('id',id);if(error)return message('adminMsg',error.message,true);message('adminMsg','Kategória módosítva.');await loadCategories();await loadAdminCategories();
-}
-async function deleteCategory(id){
-  if(!confirm('Biztosan törlöd ezt a kategóriát? A korábbi feltöltések pontjai megmaradnak.'))return;const {error}=await sb.from('categories').delete().eq('id',id);if(error)return message('adminMsg',error.message,true);message('adminMsg','Kategória törölve.');await loadCategories();await loadAdminCategories();
-}
+async function addCategory(){const name=$('newCategoryName').value.trim(),points=Number($('newCategoryPoints').value);if(!name||!Number.isFinite(points)||points<0)return message('adminMsg','Adj meg nevet és pontot.',true);const {error}=await sb.from('categories').insert({name,points});if(error)return message('adminMsg',error.message,true);$('newCategoryName').value='';$('newCategoryPoints').value='';message('adminMsg','Kategória hozzáadva.');await loadCategories();await loadAdminCategories()}
+async function updateCategory(id){const name=$(`cat-name-${id}`).value.trim(),points=Number($(`cat-points-${id}`).value);const {error}=await sb.from('categories').update({name,points}).eq('id',id);if(error)return message('adminMsg',error.message,true);message('adminMsg','Módosítva.');await loadCategories();await loadAdminCategories()}
+async function deleteCategory(id){if(!confirm('Biztosan törlöd ezt a kategóriát?'))return;const {error}=await sb.from('categories').delete().eq('id',id);if(error)return message('adminMsg',error.message,true);message('adminMsg','Kategória törölve.');await loadCategories();await loadAdminCategories()}
 async function loadAdminUsers(){
-  const {data,error}=await sb.from('profiles').select('id,display_name,is_admin,points').order('display_name');if(error)return $('adminUsers').textContent=error.message;
-  $('adminUsers').innerHTML=(data||[]).map(u=>`<div class="user-row"><div><b>${esc(u.display_name||'Névtelen')}</b><div class="muted">${u.points||0} pont</div></div><select id="role-${u.id}" ${u.id===currentUser.id?'disabled':''}><option value="false" ${!u.is_admin?'selected':''}>Játékos</option><option value="true" ${u.is_admin?'selected':''}>Admin</option></select><button class="small-btn" ${u.id===currentUser.id?'disabled':''} onclick="saveUserRole('${u.id}')">Mentés</button></div>`).join('');
+  const {data,error}=await sb.from('profiles').select('id,display_name,is_admin,points').order('display_name');if(error)return;
+  $('adminUsers').innerHTML=(data||[]).map(u=>`<div class="user-row"><div><b>${esc(u.display_name||'Névtelen')}</b><div class="muted">${u.points||0} pont</div></div><select id="role-${u.id}" ${u.id===currentUser.id?'disabled':''}><option value="false" ${!u.is_admin?'selected':''}>Játékos</option><option value="true" ${u.is_admin?'selected':''}>Admin</option></select><button class="btn small" ${u.id===currentUser.id?'disabled':''} onclick="saveUserRole('${u.id}')">Mentés</button></div>`).join('');
 }
 async function saveUserRole(id){const val=$(`role-${id}`).value==='true';const {error}=await sb.from('profiles').update({is_admin:val}).eq('id',id);if(error)return alert(error.message);await loadAdminUsers()}
 
