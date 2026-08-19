@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ItalPont V4.8</title>
+<title>ItalPont V5.0</title>
+<link rel="icon" type="image/png" href="./assets/app-icon.png">
 <style>
 :root{
   --bg:#0b0d10;--panel:#17191e;--panel2:#1d2026;--line:#2a2e36;
@@ -173,24 +174,66 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 .zoom-row{display:grid;grid-template-columns:55px 1fr;gap:10px;align-items:center}
 .badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#3a2d14;color:#fde68a;font-size:11px}
 .mobile-only{display:none}
+.mobile-menu-toggle{display:none;background:#20232a;border:1px solid #383d46;color:#fff;padding:10px 13px;border-radius:10px;font-weight:800}
+.mobile-menu{
+  display:none;width:100%;padding:8px 0 2px;border-top:1px solid #2a2e35;margin-top:2px
+}
+.mobile-menu.open{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.mobile-menu .mobile-navbtn{
+  border:1px solid #30343d;background:#1a1d22;color:#e5e7eb;border-radius:10px;
+  padding:12px 10px;font-weight:800;text-align:left
+}
+.mobile-menu .mobile-navbtn.active{border-color:#facc15;box-shadow:inset 0 -2px 0 #facc15;background:#20232a}
+.mobile-menu .mobile-navbtn.admin-mobile{grid-column:1/-1;background:#2a2110;border-color:#66521b}
+.mobile-menu .mobile-navbtn.logout-mobile{grid-column:1/-1;text-align:center}
+.native-only{display:none!important}
+html.native-app .native-only{display:block!important}
+html.native-app .web-photo-input{display:none!important}
+.native-photo-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px}
+.native-photo-preview{display:none;grid-template-columns:72px 1fr auto;gap:10px;align-items:center;margin-top:10px;padding:9px;border:1px solid #323741;border-radius:10px;background:#101217}
+.native-photo-preview.show{display:grid}
+.native-photo-preview img{width:72px;height:72px;border-radius:9px;object-fit:cover;background:#222}
+.native-photo-preview .filemeta{min-width:0}
+.native-photo-preview .filemeta b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.push-card{margin-top:14px;padding:13px;border:1px solid #303640;border-radius:11px;background:#101217}
+.push-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.push-status{font-weight:800}
+.push-status.ok{color:#34d399}.push-status.warn{color:#fbbf24}.push-status.off{color:#f87171}
+@media(max-width:650px){
+  .native-photo-actions{grid-template-columns:1fr}
+  .native-photo-preview{grid-template-columns:58px 1fr}
+  .native-photo-preview img{width:58px;height:58px}
+  .native-photo-preview button{grid-column:1/-1}
+}
+
+
 @media(max-width:1150px){.grid-home{grid-template-columns:320px 1fr}.rightcol{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:20px}.navbar{flex-wrap:wrap}.brand{min-width:auto}.user-chip{min-width:auto}.navlinks{order:3;width:100%}}
 @media(max-width:760px){
   .shell{padding:0 10px 20px}.hero{border-radius:0 0 14px 14px}.navbar{position:static;padding:10px}.brand{font-size:22px}.brand span:first-child{font-size:28px}
-  .user-chip .who{display:none}.navlinks{justify-content:flex-start;overflow:auto;flex-wrap:nowrap}.navbtn{white-space:nowrap}
+  .user-chip .who{display:none}
+  .navlinks{display:none}
+  .mobile-menu-toggle{display:inline-flex;align-items:center;justify-content:center}
+  .navbar{gap:9px}
+  .brand{flex:1}
+  .user-chip{min-width:auto;margin-left:auto}
+  .user-chip .navbtn{display:none}
+  .navbtn{white-space:nowrap}
   .grid-home{grid-template-columns:1fr}.rightcol{grid-column:auto;grid-template-columns:1fr}.historybar{grid-template-columns:1fr 1fr}.historybar .datebox,.period-label{grid-column:1/-1}
   .admin-grid,.profile-layout{grid-template-columns:1fr}.category-row{grid-template-columns:1fr}.category-row .actions{grid-column:1/-1}.category-head{grid-template-columns:1fr}.qty-row{grid-template-columns:1fr 86px 76px 44px}.user-row{grid-template-columns:1fr}.user-row button{grid-column:auto}
   .feed-card{grid-template-columns:68px 1fr}.feed-img{width:68px;height:68px}.feed-points{grid-column:2;text-align:left;font-size:18px}
 }
 </style>
+<script src="./platform.js"></script>
+<script src="./native.js"></script>
 </head>
 <body>
-<!-- V48_STAT_FIX_2 -->
+<!-- V50_NATIVE_ANDROID -->
 <div id="publicAuth">
   <div class="shell auth-wrap">
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V4.8</h1>
+        <h1>🍺 ItalPont V5.0</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -209,6 +252,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
     <div class="hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="navbar">
       <div class="brand"><span>🍺</span><b>ItalPont</b></div>
+      <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" onclick="toggleMobileMenu()" aria-expanded="false">☰ Menü</button>
       <div class="navlinks">
         <button class="navbtn active" data-page="home" onclick="showPage('home',this)">🏠 Főoldal</button>
         <button class="navbtn" data-page="leader" onclick="showPage('leader',this)">🏆 Ranglisták</button>
@@ -221,6 +265,16 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
         <img id="navAvatar" class="avatar" alt="profil">
         <div class="who"><b id="navName"></b><div id="navPoints" class="muted"></div></div>
         <button class="navbtn" onclick="logout()">↪</button>
+      </div>
+
+      <div id="mobileMenu" class="mobile-menu">
+        <button class="mobile-navbtn active" data-mobile-page="home" onclick="mobileNavigate('home')">🏠 Főoldal</button>
+        <button class="mobile-navbtn" data-mobile-page="leader" onclick="mobileNavigate('leader')">🏆 Ranglisták</button>
+        <button class="mobile-navbtn" data-mobile-page="stats" onclick="mobileNavigate('stats')">📈 Statisztikák</button>
+        <button class="mobile-navbtn" data-mobile-page="upload" onclick="mobileNavigate('upload')">➕ Feltöltés</button>
+        <button class="mobile-navbtn" data-mobile-page="profile" onclick="mobileNavigate('profile')">👤 Profilom</button>
+        <button id="mobileAdminNav" class="mobile-navbtn admin-mobile hidden" data-mobile-page="admin" onclick="mobileNavigate('admin')">🛠️ Admin</button>
+        <button class="mobile-navbtn logout-mobile" onclick="logout()">↪ Kijelentkezés</button>
       </div>
     </div>
 
@@ -245,9 +299,10 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 
           <div class="midcol">
             <div class="panel section"><div class="panel-pad">
-              <div class="panel-title"><h3>🍸 Legutóbbi italok</h3><span class="muted">utolsó 8</span></div>
+              <div class="panel-title"><h3>🍸 Legutóbbi italok</h3><span class="muted">utolsó 5</span></div>
               <div id="homeFeed"></div>
-              <button class="btn secondary full" style="margin-top:12px" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">+ Ital feltöltése</button>
+              <button class="btn secondary full" style="margin-top:12px" onclick="openAllDrinks()">Összes megtekintése ›</button>
+              <button class="btn full" style="margin-top:8px" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">+ Ital feltöltése</button>
             </div></div>
           </div>
 
@@ -352,13 +407,30 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
                 <div id="quantityScale" class="quantity-scale"></div>
               </div>
             </div>
-            <div><label>Fotó</label><input id="photo" type="file" accept="image/*" capture="environment"><div class="muted" style="margin-top:5px">Automatikusan max. 1600 px-re és WebP-re tömörítjük, majd Cloudflare R2-re töltjük.</div></div>
+            <div>
+              <label>Fotó</label>
+              <div class="web-photo-input">
+                <input id="photo" type="file" accept="image/*" capture="environment">
+              </div>
+              <div class="native-only">
+                <div class="native-photo-actions">
+                  <button class="btn secondary" type="button" onclick="ItalPontNative.takeDrinkPhoto()">📷 Kamera</button>
+                  <button class="btn secondary" type="button" onclick="ItalPontNative.chooseDrinkPhoto()">🖼️ Galéria</button>
+                </div>
+                <div id="nativePhotoPreview" class="native-photo-preview">
+                  <img id="nativePhotoPreviewImg" alt="Kiválasztott kép">
+                  <div class="filemeta"><b id="nativePhotoName">Kép</b><div id="nativePhotoMeta" class="muted"></div></div>
+                  <button class="btn danger small" type="button" onclick="ItalPontNative.clearDrinkPhoto()">Eltávolítás</button>
+                </div>
+              </div>
+              <div class="muted" style="margin-top:7px">Automatikusan max. 1600 px-re és WebP-re tömörítjük, majd Cloudflare R2-re töltjük.</div>
+            </div>
           </div>
           <button class="btn" style="margin-top:12px" onclick="uploadDrink()">Feltöltés és pont hozzáadása</button>
           <div id="uploadMsg" class="msg hidden"></div>
         </div></div>
-        <div class="panel" style="margin-top:18px"><div class="panel-pad">
-          <h3>📷 Legutóbbi feltöltések</h3><div id="allDrinks" class="card-list"></div>
+        <div id="allDrinksPanel" class="panel" style="margin-top:18px"><div class="panel-pad">
+          <h3>📷 Összes feltöltött ital</h3><div id="allDrinks" class="card-list"></div>
         </div></div>
       </section>
 
@@ -378,6 +450,17 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
               </div>
               <button class="btn" style="margin-top:12px" onclick="saveProfile()">Profil mentése</button>
               <div id="profileMsg" class="msg hidden"></div>
+
+              <div id="nativePushSettings" class="push-card native-only">
+                <div class="push-row">
+                  <div>
+                    <b>🔔 Push értesítések</b>
+                    <div id="pushStatus" class="push-status warn" style="margin-top:4px">Állapot ellenőrzése...</div>
+                    <div class="muted" style="margin-top:3px">Új ital és új játékos regisztráció esetén.</div>
+                  </div>
+                  <button class="btn secondary" type="button" onclick="ItalPontNative.enablePush()">Értesítések bekapcsolása</button>
+                </div>
+              </div>
             </div>
           </div>
         </div></div>
@@ -470,6 +553,7 @@ let categoryDraft=[],deletedCategoryIds=[];
 let editingDrink=null;
 let statsCache={drinks:[],profiles:[]};
 let croppedAvatarBlob=null,cropObjectUrl=null;
+let nativeDrinkPhotoFile=null;
 const crop={img:null,minScale:1,scale:1,x:0,y:0,drag:false,lastX:0,lastY:0};
 const $=id=>document.getElementById(id);
 const configured=!SUPABASE_URL.startsWith('IDE_')&&!SUPABASE_ANON_KEY.startsWith('IDE_');
@@ -481,6 +565,34 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&l
 function avatarUrl(url){return url||'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#2b3140"/><circle cx="50" cy="38" r="18" fill="#fbbf24"/><path d="M18 90c5-25 20-35 32-35s27 10 32 35" fill="#fbbf24"/></svg>`)}
 function localDateInputValue(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
 function huDate(d){return d.toLocaleDateString('hu-HU',{year:'numeric',month:'2-digit',day:'2-digit'})}
+
+window.setNativeDrinkPhoto=function(file,previewUrl){
+  nativeDrinkPhotoFile=file||null;
+  const box=$('nativePhotoPreview'),img=$('nativePhotoPreviewImg'),name=$('nativePhotoName'),meta=$('nativePhotoMeta');
+  if(!box)return;
+  if(!file){
+    box.classList.remove('show');
+    if(img)img.removeAttribute('src');
+    return;
+  }
+  if(img)img.src=previewUrl||URL.createObjectURL(file);
+  if(name)name.textContent=file.name||'ital-foto.jpg';
+  if(meta)meta.textContent=`${(file.size/1024/1024).toFixed(2)} MB · ${file.type||'kép'}`;
+  box.classList.add('show');
+};
+window.getSelectedDrinkPhoto=function(){
+  return nativeDrinkPhotoFile || $('photo')?.files?.[0] || null;
+};
+window.savePushToken=async function(token){
+  if(!sb||!currentUser||!token)return;
+  const {error}=await sb.rpc('register_push_token',{p_token:token,p_platform:'android'});
+  if(error)throw error;
+};
+window.removePushToken=async function(token){
+  if(!sb||!currentUser||!token)return;
+  const {error}=await sb.rpc('unregister_push_token',{p_token:token});
+  if(error)console.warn('Push token törlése sikertelen:',error);
+};
 
 async function compressImageFile(file,maxDimension=1600,quality=.82){
   if(!file?.type?.startsWith('image/'))throw new Error('Csak képfájl tölthető fel.');
@@ -532,14 +644,38 @@ async function deleteR2Object(key){
   if(data?.ok===false)throw new Error(data.error||'R2 törlési hiba.');
 }
 
+function toggleMobileMenu(force){
+  const menu=$('mobileMenu');
+  const toggle=$('mobileMenuToggle');
+  if(!menu||!toggle)return;
+  const open=typeof force==='boolean' ? force : !menu.classList.contains('open');
+  menu.classList.toggle('open',open);
+  toggle.setAttribute('aria-expanded',open?'true':'false');
+  toggle.textContent=open?'✕ Bezárás':'☰ Menü';
+}
+function mobileNavigate(page){
+  const desktopBtn=document.querySelector(`.navbtn[data-page="${page}"]`);
+  showPage(page,desktopBtn);
+  document.querySelectorAll('[data-mobile-page]').forEach(x=>x.classList.toggle('active',x.dataset.mobilePage===page));
+  if(page==='stats')loadStatsPage();
+  toggleMobileMenu(false);
+}
+
 function showPage(page,btn){
   document.querySelectorAll('main section[id^=page-]').forEach(x=>x.classList.add('hidden'));
   show('page-'+page);
   document.querySelectorAll('.navbtn[data-page]').forEach(x=>x.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  document.querySelectorAll('[data-mobile-page]').forEach(x=>x.classList.toggle('active',x.dataset.mobilePage===page));
   if(page==='stats')loadStatsPage();
+  toggleMobileMenu(false);
   window.scrollTo({top:document.querySelector('.navbar').offsetTop,behavior:'smooth'});
 }
+function openAllDrinks(){
+  showPage('upload',document.querySelector('[data-page=upload]'));
+  setTimeout(()=>document.getElementById('allDrinksPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),80);
+}
+
 function openLeaderPage(period){
   showPage('leader',document.querySelector('[data-page=leader]'));
   const b=document.querySelector(`.tab[data-period="${period}"]`);setPeriod(period,b);
@@ -559,7 +695,18 @@ async function login(){
   if(error)return message('authMsg',error.message,true);
   await start();
 }
-async function logout(){if(sb)await sb.auth.signOut();location.reload()}
+async function logout(){
+  try{if(window.ItalPontNative?.unregisterPush)await window.ItalPontNative.unregisterPush()}catch(e){console.warn(e)}
+  if(sb)await sb.auth.signOut();
+  location.reload();
+}
+
+document.addEventListener('change',e=>{
+  if(e.target?.id==='photo' && e.target.files?.length){
+    nativeDrinkPhotoFile=null;
+    window.ItalPontNative?.clearDrinkPhotoPreviewOnly?.();
+  }
+});
 
 async function start(){
   if(!sb)return;
@@ -568,7 +715,12 @@ async function start(){
   currentUser=session.user;hide('publicAuth');show('app');
   $('leaderDate').value=localDateInputValue(selectedLeaderDate);
   await loadProfile();await loadCategories();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
-  if(currentProfile?.is_admin){show('adminNav');show('roleBadge');await loadAdmin()}else{hide('adminNav');hide('roleBadge')}
+  if(window.ItalPontNative?.initPush)window.ItalPontNative.initPush();
+  if(currentProfile?.is_admin){
+    show('adminNav');show('mobileAdminNav');show('roleBadge');await loadAdmin()
+  }else{
+    hide('adminNav');hide('mobileAdminNav');hide('roleBadge')
+  }
 }
 async function loadProfile(){
   const {data,error}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
@@ -733,7 +885,7 @@ async function loadHome(){
     $('homeWeek').innerHTML=rankRows(week.rows,3);
     $('homeWeekLabel').textContent=week.label;
 
-    const {data}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(8);
+    const {data}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(5);
     $('homeFeed').innerHTML=(data||[]).map(feedHtml).join('')||'<div class="muted">Még nincs feltöltött ital.</div>';
 
     await loadHomeStats();
@@ -773,7 +925,7 @@ async function loadDrinks(){
   $('allDrinks').innerHTML=(data||[]).map(d=>`<div class="item-card">${feedHtml(d)}</div>`).join('')||'<div class="muted">Nincs feltöltés.</div>';
 }
 async function uploadDrink(){
-  const name=$('drinkName').value.trim(),file=$('photo').files[0],catId=Number($('category').value);
+  const name=$('drinkName').value.trim(),file=window.getSelectedDrinkPhoto(),catId=Number($('category').value);
   const cat=selectedCategory(),opt=selectedQuantityOption();
   if(!name||!file||!catId||!cat||!opt)return message('uploadMsg','Adj meg italnevet, kategóriát, mennyiséget és fotót.',true);
 
@@ -799,7 +951,7 @@ async function uploadDrink(){
       throw error;
     }
 
-    $('drinkName').value='';$('photo').value='';
+    $('drinkName').value='';if($('photo'))$('photo').value='';nativeDrinkPhotoFile=null;window.ItalPontNative?.clearDrinkPhoto();
     message('uploadMsg',`${opt.label} · +${opt.points} pont! A kép Cloudflare R2-re került.`);
     await loadProfile();
     await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
