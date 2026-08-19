@@ -105,6 +105,29 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 .inline-stat-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}
 .inline-stat-head .muted{font-size:12px}
 @media(max-width:650px){.inline-player-stats{margin-left:0}.inline-stat-row{grid-template-columns:1fr auto}}
+.home-stats-divider{height:1px;background:#2a2e35;margin:18px 0 14px}
+.home-mini-chart{display:grid;gap:12px;justify-items:center}
+.home-mini-donut{position:relative;width:190px;height:190px}
+.home-mini-donut canvas{width:190px;height:190px;display:block}
+.home-mini-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.home-mini-center strong{display:block;font-size:24px}.home-mini-center span{display:block;color:#9ca3af;font-size:11px}
+.home-mini-legend{width:100%;display:grid;gap:5px}
+.home-mini-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:7px;align-items:center;padding:5px 0;border-bottom:1px solid #252931;font-size:12px}
+.home-mini-row:last-child{border-bottom:0}
+.home-mini-dot{width:9px;height:9px;border-radius:50%}
+.home-mini-name{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-mini-amount{color:#9ca3af;font-size:11px}
+.rank-player-details{display:block}
+.rank-player-details>summary{list-style:none;cursor:pointer}
+.rank-player-details>summary::-webkit-details-marker{display:none}
+.rank-player-details[open]>summary{background:#ffffff08;border-radius:9px}
+.rank-player-details .inline-player-stats{margin:3px 0 10px 44px}
+@media(max-width:650px){.rank-player-details .inline-player-stats{margin-left:0}}
+.home-mini-donut-css{position:relative;width:190px;height:190px;border-radius:50%;display:grid;place-items:center}
+.home-mini-donut-css::after{content:"";position:absolute;inset:49px;border-radius:50%;background:#15181d}
+.home-mini-donut-css .home-mini-center{z-index:1;position:static;transform:none}
+
+
 
 
 .stats-grid{display:grid;grid-template-columns:minmax(360px,1.1fr) minmax(300px,.9fr);gap:20px;align-items:start}
@@ -161,6 +184,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 </style>
 </head>
 <body>
+<!-- V48_STAT_FIX_2 -->
 <div id="publicAuth">
   <div class="shell auth-wrap">
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
@@ -208,6 +232,14 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
               <div class="panel-title"><h3>📊 Összesített ranglista</h3></div>
               <div id="homeOverall"></div>
               <button class="btn secondary full" style="margin-top:12px" onclick="openLeaderPage('all')">Teljes ranglista ›</button>
+
+              <div class="home-stats-divider"></div>
+              <div class="panel-title" style="margin-bottom:8px">
+                <h3 style="font-size:16px">🍹 Fogyasztás kategóriák szerint</h3>
+              </div>
+              <div id="homeOverallStats">
+                <div class="muted">Statisztika betöltése...</div>
+              </div>
             </div></div>
           </div>
 
@@ -626,29 +658,85 @@ async function fetchLeaderboard(period='all',ref=new Date()){
 function rankRows(rows,limit=null){
   const arr=limit?rows.slice(0,limit):rows;
   return arr.map((x,i)=>`
-    <div class="score-row">
-      <div class="rank ${i<3?'top':''}">${i+1}</div>
-      <div class="namecell player-link" role="button" tabindex="0"
-           onclick="toggleInlinePlayerStats('${x.id}')"
-           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleInlinePlayerStats('${x.id}')}">
-        <img class="avatar sm" src="${avatarUrl(x.avatar)}">
-        <div>
-          <span class="player-name">${esc(x.name)}</span>
-          <div class="drink-count">🍻 ${x.drinkCount||0} ital</div>
+    <details class="rank-player-details" ontoggle="loadRankPlayerDetails(this,'${x.id}')">
+      <summary class="score-row">
+        <div class="rank ${i<3?'top':''}">${i+1}</div>
+        <div class="namecell player-link">
+          <img class="avatar sm" src="${avatarUrl(x.avatar)}">
+          <div>
+            <span class="player-name">${esc(x.name)}</span>
+            <div class="drink-count">🍻 ${x.drinkCount||0} ital</div>
+          </div>
         </div>
-      </div>
-      <div class="points">${x.points} pont</div>
-    </div>
-    <div id="inline-stats-${x.id}" class="inline-player-stats hidden">
-      <div class="muted">Betöltés...</div>
-    </div>`).join('')||'<div class="muted">Nincs adat.</div>';
+        <div class="points">${x.points} pont</div>
+      </summary>
+      <div class="inline-player-stats" data-loaded="false"><div class="muted">Betöltés...</div></div>
+    </details>`).join('')||'<div class="muted">Nincs adat.</div>';
 }
+
+function buildConicGradient(rows){
+  const total=rows.reduce((s,r)=>s+r.count,0);
+  if(!total)return '#2a2e35';
+  let start=0;
+  const parts=[];
+  rows.forEach((r,i)=>{
+    const end=start+(r.count/total*100);
+    parts.push(`${chartPalette(i,rows.length)} ${start.toFixed(3)}% ${end.toFixed(3)}%`);
+    start=end;
+  });
+  return `conic-gradient(${parts.join(',')})`;
+}
+async function loadHomeStats(){
+  const target=$('homeOverallStats');
+  if(!target)return;
+
+  try{
+    const {data,error}=await sb.from('drinks')
+      .select('user_id,category_name,quantity_label,amount_ml,points');
+    if(error)throw error;
+
+    const drinks=data||[];
+    const rows=aggregateDrinkStats(drinks);
+    if(!rows.length){
+      target.innerHTML='<div class="muted">Még nincs feltöltött ital.</div>';
+      return;
+    }
+
+    const total=drinks.length;
+    target.innerHTML=`
+      <div class="home-mini-chart">
+        <div class="home-mini-donut-css" style="background:${buildConicGradient(rows)}">
+          <div class="home-mini-center"><strong>${total}</strong><span>ital</span></div>
+        </div>
+        <div class="home-mini-legend">
+          ${rows.map((r,i)=>`
+            <div class="home-mini-row">
+              <span class="home-mini-dot" style="background:${chartPalette(i,rows.length)}"></span>
+              <div>
+                <div class="home-mini-name">${esc(r.category)}</div>
+                <div class="home-mini-amount">${formatConsumedAmount(r.totalMl,r.count,r.unknownCount)}</div>
+              </div>
+              <b>${r.count}</b>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }catch(e){
+    console.error(e);
+    target.innerHTML=`<div class="msg error">${esc(e.message||String(e))}</div>`;
+  }
+}
+
 async function loadHome(){
   try{
     const [all,week]=await Promise.all([fetchLeaderboard('all'),fetchLeaderboard('week')]);
-    $('homeOverall').innerHTML=rankRows(all.rows,5);$('homeWeek').innerHTML=rankRows(week.rows,3);$('homeWeekLabel').textContent=week.label;
+    $('homeOverall').innerHTML=rankRows(all.rows,5);
+    $('homeWeek').innerHTML=rankRows(week.rows,3);
+    $('homeWeekLabel').textContent=week.label;
+
     const {data}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(8);
     $('homeFeed').innerHTML=(data||[]).map(feedHtml).join('')||'<div class="muted">Még nincs feltöltött ital.</div>';
+
+    await loadHomeStats();
   }catch(e){console.error(e)}
 }
 async function setPeriod(period,btn){
@@ -1028,61 +1116,52 @@ async function loadLeaderboardStats(preferredUserId=null){
     $('overallStatsContent').innerHTML=`<div class="msg error">${esc(e.message||String(e))}</div>`;
   }
 }
-async function toggleInlinePlayerStats(userId){
-  const box=$(`inline-stats-${userId}`);
-  if(!box)return;
+async function loadRankPlayerDetails(details,userId){
+  if(!details?.open)return;
 
-  if(!box.classList.contains('hidden')){
-    hide(box);
-    return;
+  const container=details.parentElement;
+  if(container){
+    container.querySelectorAll(':scope > .rank-player-details[open]').forEach(other=>{
+      if(other!==details)other.removeAttribute('open');
+    });
   }
 
-  // Close any other open player dropdowns.
-  document.querySelectorAll('.inline-player-stats').forEach(el=>{
-    if(el.id!==`inline-stats-${userId}`)el.classList.add('hidden');
-  });
+  const box=details.querySelector('.inline-player-stats');
+  if(!box || box.dataset.loaded==='true')return;
+  box.innerHTML='<div class="muted">Betöltés...</div>';
 
-  show(box);
-
-  // Reuse cached all-time stats if available; otherwise fetch this player's drinks.
-  let profile=statsCache.profiles.find(p=>p.id===userId);
-  let drinks=statsCache.drinks.filter(d=>d.user_id===userId);
-
-  if(!profile || (!statsCache.drinks.length && currentPeriod!=='all')){
-    const [{data:p,error:pe},{data:d,error:de}]=await Promise.all([
+  try{
+    const [{data:profile,error:pe},{data:drinks,error:de}]=await Promise.all([
       sb.from('profiles').select('id,display_name,points,drink_count,avatar_url').eq('id',userId).single(),
       sb.from('drinks').select('id,user_id,category_name,quantity_label,amount_ml,points,created_at').eq('user_id',userId)
     ]);
-    if(pe||de){
-      box.innerHTML=`<div class="msg error">${esc((pe||de).message)}</div>`;
-      return;
-    }
-    profile=p;
-    drinks=d||[];
+    if(pe)throw pe;
+    if(de)throw de;
+
+    const rows=aggregateDrinkStats(drinks||[]);
+    const totalMl=rows.reduce((s,r)=>s+r.totalMl,0);
+    const unknown=rows.reduce((s,r)=>s+r.unknownCount,0);
+
+    box.innerHTML=`
+      <div class="inline-stat-head">
+        <div>
+          <b>${esc(profile?.display_name||'Névtelen')}</b>
+          <div class="muted">🍻 ${(drinks||[]).length} ital · ${profile?.points||0} pont</div>
+        </div>
+        <div class="muted">${formatConsumedAmount(totalMl,(drinks||[]).length,unknown)}</div>
+      </div>
+      <div class="inline-stat-grid">
+        ${rows.map(r=>`
+          <div class="inline-stat-row">
+            <div><b>${esc(r.category)}</b><div class="muted">${formatConsumedAmount(r.totalMl,r.count,r.unknownCount)}</div></div>
+            <div class="inline-stat-right"><b>${r.count} ital</b><div class="muted">${r.points} pont</div></div>
+          </div>`).join('') || '<div class="muted">Ennek a játékosnak még nincs feltöltött itala.</div>'}
+      </div>`;
+    box.dataset.loaded='true';
+  }catch(e){
+    console.error(e);
+    box.innerHTML=`<div class="msg error">${esc(e.message||String(e))}</div>`;
   }
-
-  const rows=aggregateDrinkStats(drinks);
-  const totalMl=rows.reduce((s,r)=>s+r.totalMl,0);
-  const unknown=rows.reduce((s,r)=>s+r.unknownCount,0);
-
-  box.innerHTML=`
-    <div class="inline-stat-head">
-      <div><b>${esc(profile?.display_name||'Névtelen')}</b><div class="muted">🍻 ${drinks.length} ital · ${profile?.points||0} pont</div></div>
-      <div class="muted">${formatConsumedAmount(totalMl,drinks.length,unknown)}</div>
-    </div>
-    <div class="inline-stat-grid">
-      ${rows.map(r=>`
-        <div class="inline-stat-row">
-          <div>
-            <b>${esc(r.category)}</b>
-            <div class="muted">${formatConsumedAmount(r.totalMl,r.count,r.unknownCount)}</div>
-          </div>
-          <div class="inline-stat-right">
-            <b>${r.count} ital</b>
-            <div class="muted">${r.points} pont</div>
-          </div>
-        </div>`).join('') || '<div class="muted">Ennek a játékosnak még nincs feltöltött itala.</div>'}
-    </div>`;
 }
 
 function renderStandaloneOverallStats(){
