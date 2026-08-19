@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ItalPont V4.4</title>
+<title>ItalPont V4.6</title>
 <style>
 :root{
   --bg:#0b0d10;--panel:#17191e;--panel2:#1d2026;--line:#2a2e36;
@@ -83,8 +83,23 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 .card-list{display:grid;gap:10px}
 .item-card{background:#121419;border:1px solid #292d34;border-radius:12px;padding:13px}
 .admin-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
-.category-row{display:grid;grid-template-columns:1fr 110px 200px;gap:8px;margin-bottom:8px}
-.user-row{display:grid;grid-template-columns:1fr 110px 90px;gap:8px;align-items:center;margin-bottom:8px}
+.category-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:8px}
+.category-editor{padding:14px;margin-bottom:12px;background:#111419;border:1px solid #2b3038;border-radius:12px}
+.category-head{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:8px;align-items:center}
+.qty-editor-title{margin:12px 0 7px;font-size:13px;color:#aeb4bf;font-weight:800}
+.drink-admin-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.edit-drink-grid{display:grid;gap:12px}
+.edit-drink-current{padding:10px 12px;border-radius:10px;background:#101217;border:1px solid #303640}
+.statline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.drink-count{color:#d1d5db;font-size:12px;font-weight:700}
+.qty-row{display:grid;grid-template-columns:minmax(110px,1fr) 100px 90px 48px;gap:7px;align-items:center;margin-bottom:7px}
+.quantity-box{margin-top:13px;padding:14px;background:#101217;border:1px solid #303640;border-radius:12px}
+.quantity-top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:9px}
+.quantity-readout{font-size:18px;font-weight:900;color:#fbbf24}
+.quantity-range{width:100%;accent-color:#8b5cf6;padding:0;border:0;background:transparent;box-shadow:none}
+.quantity-scale{display:flex;justify-content:space-between;gap:8px;margin-top:5px;color:#8f96a3;font-size:11px}
+.option-chip{display:inline-block;padding:3px 7px;border-radius:999px;background:#282330;color:#e1d5ff;font-size:12px;margin-left:5px}
+.user-row{display:grid;grid-template-columns:minmax(150px,1fr) 110px 210px;gap:8px;align-items:center;margin-bottom:10px;padding:9px;border:1px solid #2a2e36;border-radius:10px;background:#121419}
 .msg{margin-top:10px;padding:10px;border-radius:10px;background:#252932}
 .msg.success{background:#123d2b}.msg.error{background:#4d172b}
 .auth-wrap{max-width:760px;margin:26px auto}
@@ -106,7 +121,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
   .shell{padding:0 10px 20px}.hero{border-radius:0 0 14px 14px}.navbar{position:static;padding:10px}.brand{font-size:22px}.brand span:first-child{font-size:28px}
   .user-chip .who{display:none}.navlinks{justify-content:flex-start;overflow:auto;flex-wrap:nowrap}.navbtn{white-space:nowrap}
   .grid-home{grid-template-columns:1fr}.rightcol{grid-column:auto;grid-template-columns:1fr}.historybar{grid-template-columns:1fr 1fr}.historybar .datebox,.period-label{grid-column:1/-1}
-  .admin-grid,.profile-layout{grid-template-columns:1fr}.category-row{grid-template-columns:1fr 90px}.category-row .actions{grid-column:1/-1}.user-row{grid-template-columns:1fr 90px}.user-row button{grid-column:1/-1}
+  .admin-grid,.profile-layout{grid-template-columns:1fr}.category-row{grid-template-columns:1fr}.category-row .actions{grid-column:1/-1}.category-head{grid-template-columns:1fr}.qty-row{grid-template-columns:1fr 86px 76px 44px}.user-row{grid-template-columns:1fr}.user-row button{grid-column:auto}
   .feed-card{grid-template-columns:68px 1fr}.feed-img{width:68px;height:68px}.feed-points{grid-column:2;text-align:left;font-size:18px}
 }
 </style>
@@ -117,7 +132,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V4.4</h1>
+        <h1>🍺 ItalPont V4.6</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -210,8 +225,19 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
         <div class="panel"><div class="panel-pad">
           <h2>➕ Ital feltöltése</h2>
           <div class="form-grid">
-            <div><label>Ital neve</label><input id="drinkName" placeholder="pl. Mojito"></div>
-            <div><label>Kategória</label><select id="category"></select></div>
+            <div><label>Ital neve</label><input id="drinkName" placeholder="pl. Soproni IPA"></div>
+            <div>
+              <label>Főkategória</label>
+              <select id="category" onchange="renderQuantitySelector()"></select>
+              <div id="quantityBox" class="quantity-box hidden">
+                <div class="quantity-top">
+                  <div><b>Mennyiség</b><div class="muted">Húzd a csúszkát a kívánt mennyiséghez.</div></div>
+                  <div id="quantityReadout" class="quantity-readout"></div>
+                </div>
+                <input id="quantitySlider" class="quantity-range" type="range" min="0" max="0" step="1" value="0" oninput="updateQuantityReadout()">
+                <div id="quantityScale" class="quantity-scale"></div>
+              </div>
+            </div>
             <div><label>Fotó</label><input id="photo" type="file" accept="image/*" capture="environment"><div class="muted" style="margin-top:5px">Automatikusan max. 1600 px-re és WebP-re tömörítjük, majd Cloudflare R2-re töltjük.</div></div>
           </div>
           <button class="btn" style="margin-top:12px" onclick="uploadDrink()">Feltöltés és pont hozzáadása</button>
@@ -251,7 +277,9 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
               <h3>Kategóriák</h3>
               <div id="adminCategories"></div>
               <div class="form-grid" style="margin-top:12px">
-                <input id="newCategoryName" placeholder="Új kategória (emoji is mehet)">
+                <input id="newCategoryName" placeholder="Új főkategória (emoji is mehet)">
+                <input id="newCategoryQtyLabel" placeholder="Első mennyiség, pl. 3 dl">
+                <input id="newCategoryAmountMl" type="number" min="1" step="1" placeholder="Mennyiség ml-ben">
                 <input id="newCategoryPoints" type="number" min="0" step="1" placeholder="Pont">
               </div>
               <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
@@ -259,7 +287,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
                 <button class="btn green" onclick="saveAllCategories()">💾 Minden módosítás mentése</button>
               </div>
               <div class="muted" style="margin-top:10px">
-                A pontérték módosítása visszamenőleg is érvényes: a korábbi italok pontjai és a ranglisták is újraszámolódnak.
+                A mennyiségi opciók pontértékeinek módosítása visszamenőleg is érvényes. A korábbi italok és ranglisták automatikusan újraszámolódnak.
               </div>
               <div id="adminMsg" class="msg hidden"></div>
             </div>
@@ -277,6 +305,33 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 <div id="imageModal" class="modal hidden" onclick="closeImageModal(event)">
   <button class="modal-close" onclick="closeImageModal(event,true)">×</button>
   <img id="modalImage" alt="nagyított ital">
+</div>
+
+
+<div id="drinkEditModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 style="margin-top:0">✏️ Ital kategóriájának módosítása</h2>
+    <div id="editDrinkCurrent" class="edit-drink-current"></div>
+    <div class="edit-drink-grid" style="margin-top:12px">
+      <div>
+        <label>Főkategória</label>
+        <select id="editDrinkCategory" onchange="renderEditDrinkQuantity()"></select>
+      </div>
+      <div id="editDrinkQuantityBox" class="quantity-box">
+        <div class="quantity-top">
+          <div><b>Mennyiség</b><div class="muted">A módosítás a pontszámot is frissíti.</div></div>
+          <div id="editDrinkQuantityReadout" class="quantity-readout"></div>
+        </div>
+        <input id="editDrinkQuantitySlider" class="quantity-range" type="range" min="0" max="0" step="1" value="0" oninput="updateEditDrinkQuantityReadout()">
+        <div id="editDrinkQuantityScale" class="quantity-scale"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn green full" onclick="saveDrinkCategoryEdit()">💾 Módosítás mentése</button>
+      <button class="btn secondary full" onclick="closeDrinkCategoryEditor()">Mégse</button>
+    </div>
+    <div id="editDrinkMsg" class="msg hidden"></div>
+  </div>
 </div>
 
 <div id="cropModal" class="modal hidden">
@@ -298,6 +353,7 @@ const SUPABASE_URL="https://wqtldrwvharmlkqqfdmk.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_oCTAIcer2GaXeokcd6JN8A_ulUZh8QN";
 let sb=null,currentUser=null,currentProfile=null,categories=[],currentPeriod='week',selectedLeaderDate=new Date();
 let categoryDraft=[],deletedCategoryIds=[];
+let editingDrink=null;
 let croppedAvatarBlob=null,cropObjectUrl=null;
 const crop={img:null,minScale:1,scale:1,x:0,y:0,drag:false,lastX:0,lastY:0};
 const $=id=>document.getElementById(id);
@@ -402,14 +458,67 @@ async function loadProfile(){
   const {data,error}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
   if(error)return console.error(error);
   currentProfile=data;
-  $('navAvatar').src=avatarUrl(data.avatar_url);$('navName').textContent=data.display_name||'Játékos';$('navPoints').textContent=(data.points||0)+' pont';
-  $('profileAvatar').src=avatarUrl(data.avatar_url);$('profileName').value=data.display_name||'';$('profileScore').textContent=(data.points||0)+' összpont';
+  $('navAvatar').src=avatarUrl(data.avatar_url);$('navName').textContent=data.display_name||'Játékos';$('navPoints').textContent=`${data.points||0} pont · ${data.drink_count||0} ital`;
+  $('profileAvatar').src=avatarUrl(data.avatar_url);$('profileName').value=data.display_name||'';$('profileScore').textContent=`${data.points||0} összpont · ${data.drink_count||0} feltöltött ital`;
+}
+
+function getQuantityOptions(cat){
+  let opts=cat?.quantity_options;
+  if(typeof opts==='string'){
+    try{opts=JSON.parse(opts)}catch(_){opts=[]}
+  }
+  if(!Array.isArray(opts)||!opts.length){
+    return [{
+      key:`legacy_${cat?.id||'x'}`,
+      label:'1 adag',
+      amount_ml:null,
+      points:Number(cat?.points)||0
+    }];
+  }
+  return opts.map((o,i)=>({
+    key:String(o?.key||`legacy_${cat?.id||'x'}_${i}`),
+    label:String(o?.label||`${i+1}. mennyiség`),
+    amount_ml:o?.amount_ml===null||o?.amount_ml===undefined||o?.amount_ml===''?null:Number(o.amount_ml),
+    points:Math.max(0,Math.round(Number(o?.points)||0))
+  }));
+}
+function selectedCategory(){
+  const id=Number($('category').value);
+  return categories.find(c=>Number(c.id)===id)||null;
+}
+function selectedQuantityOption(){
+  const cat=selectedCategory();
+  if(!cat)return null;
+  const opts=getQuantityOptions(cat);
+  const idx=Math.max(0,Math.min(opts.length-1,Number($('quantitySlider').value)||0));
+  return opts[idx]||opts[0]||null;
+}
+function renderQuantitySelector(){
+  const cat=selectedCategory();
+  if(!cat){hide('quantityBox');return}
+  const opts=getQuantityOptions(cat);
+  const slider=$('quantitySlider');
+  slider.min=0;slider.max=Math.max(0,opts.length-1);slider.step=1;
+  const current=Math.min(Number(slider.value)||0,opts.length-1);
+  slider.value=String(Math.max(0,current));
+  slider.disabled=opts.length<=1;
+  $('quantityScale').innerHTML=opts.map(o=>`<span>${esc(o.label)}</span>`).join('');
+  show('quantityBox');
+  updateQuantityReadout();
+}
+function updateQuantityReadout(){
+  const opt=selectedQuantityOption();
+  if(!opt){$('quantityReadout').textContent='';return}
+  $('quantityReadout').innerHTML=`${esc(opt.label)} <span class="option-chip">+${opt.points} pont</span>`;
 }
 
 async function loadCategories(){
   const {data,error}=await sb.from('categories').select('*').order('sort_order',{ascending:true}).order('name',{ascending:true});
-  if(error)return console.error(error);categories=data||[];
-  $('category').innerHTML=categories.map(c=>`<option value="${c.id}">${esc(c.name)} — ${c.points} pont</option>`).join('');
+  if(error)return console.error(error);
+  categories=data||[];
+  $('category').innerHTML=categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  $('quantitySlider').value='0';
+  renderQuantitySelector();
 }
 
 function periodBounds(period,ref){
@@ -422,17 +531,17 @@ function periodBounds(period,ref){
 }
 async function fetchLeaderboard(period='all',ref=new Date()){
   const bounds=periodBounds(period,ref);
-  let q=sb.from('drinks').select('user_id,points,created_at,profiles(display_name,avatar_url)');
+  let q=sb.from('drinks').select('user_id,points,created_at,profiles(display_name,avatar_url,drink_count)');
   if(bounds.start)q=q.gte('created_at',bounds.start).lt('created_at',bounds.end);
   const {data,error}=await q;if(error)throw error;
   const map=new Map();
-  (data||[]).forEach(d=>{const p=map.get(d.user_id)||{id:d.user_id,name:d.profiles?.display_name||'Névtelen',avatar:d.profiles?.avatar_url||null,points:0};p.points+=Number(d.points)||0;map.set(d.user_id,p)});
-  if(period==='all'){const {data:profiles}=await sb.from('profiles').select('id,display_name,avatar_url,points');(profiles||[]).forEach(p=>map.set(p.id,{id:p.id,name:p.display_name||'Névtelen',avatar:p.avatar_url,points:p.points||0}))}
+  (data||[]).forEach(d=>{const p=map.get(d.user_id)||{id:d.user_id,name:d.profiles?.display_name||'Névtelen',avatar:d.profiles?.avatar_url||null,points:0,drinkCount:d.profiles?.drink_count||0};p.points+=Number(d.points)||0;map.set(d.user_id,p)});
+  if(period==='all'){const {data:profiles}=await sb.from('profiles').select('id,display_name,avatar_url,points,drink_count');(profiles||[]).forEach(p=>map.set(p.id,{id:p.id,name:p.display_name||'Névtelen',avatar:p.avatar_url,points:p.points||0,drinkCount:p.drink_count||0}))}
   return {rows:[...map.values()].sort((a,b)=>b.points-a.points||a.name.localeCompare(b.name,'hu')),label:bounds.label};
 }
 function rankRows(rows,limit=null){
   const arr=limit?rows.slice(0,limit):rows;
-  return arr.map((x,i)=>`<div class="score-row"><div class="rank ${i<3?'top':''}">${i+1}</div><div class="namecell"><img class="avatar sm" src="${avatarUrl(x.avatar)}"><span>${esc(x.name)}</span></div><div class="points">${x.points} pont</div></div>`).join('')||'<div class="muted">Nincs adat.</div>';
+  return arr.map((x,i)=>`<div class="score-row"><div class="rank ${i<3?'top':''}">${i+1}</div><div class="namecell"><img class="avatar sm" src="${avatarUrl(x.avatar)}"><div><span>${esc(x.name)}</span><div class="drink-count">🍻 ${x.drinkCount||0} ital</div></div></div><div class="points">${x.points} pont</div></div>`).join('')||'<div class="muted">Nincs adat.</div>';
 }
 async function loadHome(){
   try{
@@ -452,8 +561,9 @@ function shiftPeriod(dir){if(currentPeriod==='all')return;const d=new Date(selec
 async function loadLeaderboard(){try{const r=await fetchLeaderboard(currentPeriod,selectedLeaderDate);$('periodLabel').textContent=r.label;$('leaderboard').innerHTML=rankRows(r.rows)}catch(e){$('leaderboard').textContent=e.message}}
 
 function feedHtml(d){
-  const adminDelete=currentProfile?.is_admin?`<button class="btn danger small" style="margin-top:8px" onclick="deleteDrink(${d.id},event)">🗑️ Törlés</button>`:'';
-  return `<div class="feed-card"><img class="feed-img" src="${d.photo_url}" onclick="openImage('${encodeURIComponent(d.photo_url)}')"><div><div class="feed-title">${esc(d.category_name||'Ital')}</div><div class="muted">${esc(d.drink_name)} · ${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</div>${adminDelete}</div><div class="feed-points">+${d.points}<div class="muted">pont</div></div></div>`;
+  const adminControls=currentProfile?.is_admin?`<div class="drink-admin-actions"><button class="btn secondary small" onclick="openDrinkCategoryEditor(${d.id},event)">✏️ Kategória</button><button class="btn danger small" onclick="deleteDrink(${d.id},event)">🗑️ Törlés</button></div>`:'';
+  const qty=d.quantity_label?` <span class="option-chip">${esc(d.quantity_label)}</span>`:'';
+  return `<div class="feed-card"><img class="feed-img" src="${d.photo_url}" onclick="openImage('${encodeURIComponent(d.photo_url)}')"><div><div class="feed-title">${esc(d.category_name||'Ital')}${qty}</div><div class="muted">${esc(d.drink_name)} · ${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</div>${adminControls}</div><div class="feed-points">+${d.points}<div class="muted">pont</div></div></div>`;
 }
 async function loadDrinks(){
   const {data,error}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(60);
@@ -462,9 +572,8 @@ async function loadDrinks(){
 }
 async function uploadDrink(){
   const name=$('drinkName').value.trim(),file=$('photo').files[0],catId=Number($('category').value);
-  if(!name||!file||!catId)return message('uploadMsg','Adj meg italnevet, kategóriát és fotót.',true);
-  const cat=categories.find(c=>Number(c.id)===catId);
-  if(!cat)return message('uploadMsg','Érvénytelen kategória.',true);
+  const cat=selectedCategory(),opt=selectedQuantityOption();
+  if(!name||!file||!catId||!cat||!opt)return message('uploadMsg','Adj meg italnevet, kategóriát, mennyiséget és fotót.',true);
 
   try{
     message('uploadMsg','Kép optimalizálása...');
@@ -479,8 +588,7 @@ async function uploadDrink(){
       user_id:currentUser.id,
       drink_name:name,
       category_id:cat.id,
-      category_name:cat.name,
-      points:cat.points,
+      quantity_key:opt.key,
       photo_url:uploaded.url,
       photo_key:uploaded.key
     });
@@ -490,7 +598,7 @@ async function uploadDrink(){
     }
 
     $('drinkName').value='';$('photo').value='';
-    message('uploadMsg',`+${cat.points} pont! A kép Cloudflare R2-re került.`);
+    message('uploadMsg',`${opt.label} · +${opt.points} pont! A kép Cloudflare R2-re került.`);
     await loadProfile();
     await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
   }catch(e){
@@ -499,6 +607,74 @@ async function uploadDrink(){
   }
 }
 
+
+
+async function openDrinkCategoryEditor(id,event){
+  event?.stopPropagation();
+  if(!currentProfile?.is_admin)return;
+  const {data,error}=await sb.from('drinks')
+    .select('id,drink_name,user_id,category_id,category_name,quantity_key,quantity_label,points')
+    .eq('id',id).single();
+  if(error)return alert(error.message);
+
+  editingDrink=data;
+  $('editDrinkCurrent').innerHTML=`<b>${esc(data.drink_name)}</b><div class="muted">${esc(data.category_name||'')} ${data.quantity_label?`· ${esc(data.quantity_label)}`:''} · jelenleg ${data.points||0} pont</div>`;
+  $('editDrinkCategory').innerHTML=categories.map(c=>`<option value="${c.id}" ${Number(c.id)===Number(data.category_id)?'selected':''}>${esc(c.name)}</option>`).join('');
+  renderEditDrinkQuantity(data.quantity_key);
+  hide('editDrinkMsg');
+  show('drinkEditModal');
+}
+function closeDrinkCategoryEditor(){
+  editingDrink=null;
+  hide('drinkEditModal');
+}
+function getEditDrinkCategory(){
+  const id=Number($('editDrinkCategory').value);
+  return categories.find(c=>Number(c.id)===id)||null;
+}
+function renderEditDrinkQuantity(preferredKey=null){
+  const cat=getEditDrinkCategory();
+  if(!cat)return;
+  const opts=getQuantityOptions(cat);
+  let idx=0;
+  if(preferredKey){
+    const found=opts.findIndex(o=>o.key===preferredKey);
+    if(found>=0)idx=found;
+  }
+  const slider=$('editDrinkQuantitySlider');
+  slider.min=0;slider.max=Math.max(0,opts.length-1);slider.step=1;slider.value=String(idx);slider.disabled=opts.length<=1;
+  $('editDrinkQuantityScale').innerHTML=opts.map(o=>`<span>${esc(o.label)}</span>`).join('');
+  updateEditDrinkQuantityReadout();
+}
+function selectedEditDrinkQuantity(){
+  const cat=getEditDrinkCategory();
+  if(!cat)return null;
+  const opts=getQuantityOptions(cat);
+  const idx=Math.max(0,Math.min(opts.length-1,Number($('editDrinkQuantitySlider').value)||0));
+  return opts[idx]||opts[0]||null;
+}
+function updateEditDrinkQuantityReadout(){
+  const opt=selectedEditDrinkQuantity();
+  $('editDrinkQuantityReadout').innerHTML=opt?`${esc(opt.label)} <span class="option-chip">+${opt.points} pont</span>`:'';
+}
+async function saveDrinkCategoryEdit(){
+  if(!currentProfile?.is_admin||!editingDrink)return;
+  const cat=getEditDrinkCategory(),opt=selectedEditDrinkQuantity();
+  if(!cat||!opt)return message('editDrinkMsg','Válassz kategóriát és mennyiséget.',true);
+
+  message('editDrinkMsg','Módosítás mentése...');
+  const {error}=await sb.rpc('admin_update_drink_category',{
+    p_drink_id:editingDrink.id,
+    p_category_id:cat.id,
+    p_quantity_key:opt.key
+  });
+  if(error)return message('editDrinkMsg',error.message,true);
+
+  message('editDrinkMsg','Kategória, mennyiség és pontszám frissítve.');
+  await loadProfile();
+  await Promise.all([loadHome(),loadLeaderboard(),loadDrinks(),loadAdminUsers()]);
+  setTimeout(closeDrinkCategoryEditor,500);
+}
 
 async function deleteDrink(id,event){
   event?.stopPropagation();
@@ -593,32 +769,64 @@ async function loadAdminCategories(){
   categoryDraft=(data||[]).map((c,i)=>({
     id:c.id,
     name:c.name,
-    points:Number(c.points)||0,
-    sort_order:Number(c.sort_order)||((i+1)*10)
+    sort_order:Number(c.sort_order)||((i+1)*10),
+    quantity_options:getQuantityOptions(c).map(o=>({...o}))
   }));
   deletedCategoryIds=[];
   renderCategoryDraft();
 }
 function renderCategoryDraft(){
   $('adminCategories').innerHTML=categoryDraft.map((c,i)=>`
-    <div class="category-row">
-      <input value="${esc(c.name)}" oninput="updateCategoryDraft(${i},'name',this.value)">
-      <input type="number" min="0" step="1" value="${c.points}" oninput="updateCategoryDraft(${i},'points',this.value)">
-      <div class="actions" style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn secondary small" ${i===0?'disabled':''} onclick="moveCategoryDraft(${i},-1)">⬆️</button>
-        <button class="btn secondary small" ${i===categoryDraft.length-1?'disabled':''} onclick="moveCategoryDraft(${i},1)">⬇️</button>
-        <button class="btn danger small" onclick="removeCategoryDraft(${i})">🗑️</button>
+    <div class="category-editor">
+      <div class="category-head">
+        <input value="${esc(c.name)}" oninput="updateCategoryDraft(${i},this.value)" placeholder="Főkategória neve">
+        <div class="actions" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn secondary small" ${i===0?'disabled':''} onclick="moveCategoryDraft(${i},-1)">⬆️</button>
+          <button class="btn secondary small" ${i===categoryDraft.length-1?'disabled':''} onclick="moveCategoryDraft(${i},1)">⬇️</button>
+          <button class="btn danger small" onclick="removeCategoryDraft(${i})">🗑️ Kategória</button>
+        </div>
       </div>
+      <div class="qty-editor-title">Mennyiségek és pontértékek</div>
+      <div>
+        ${(c.quantity_options||[]).map((o,oi)=>`
+          <div class="qty-row">
+            <input value="${esc(o.label)}" oninput="updateQtyDraft(${i},${oi},'label',this.value)" placeholder="pl. 5 dl">
+            <input type="number" min="1" step="1" value="${o.amount_ml??''}" oninput="updateQtyDraft(${i},${oi},'amount_ml',this.value)" placeholder="ml">
+            <input type="number" min="0" step="1" value="${o.points}" oninput="updateQtyDraft(${i},${oi},'points',this.value)" placeholder="pont">
+            <button class="btn danger small" title="Mennyiség törlése" onclick="removeQtyDraft(${i},${oi})">×</button>
+          </div>`).join('')}
+      </div>
+      <button class="btn secondary small" onclick="addQtyDraft(${i})">＋ Mennyiség hozzáadása</button>
     </div>`).join('') || '<div class="muted">Nincs kategória.</div>';
 }
-function updateCategoryDraft(index,field,value){
-  if(!categoryDraft[index])return;
+function updateCategoryDraft(index,value){
+  if(categoryDraft[index])categoryDraft[index].name=value;
+}
+function updateQtyDraft(ci,oi,field,value){
+  const o=categoryDraft?.[ci]?.quantity_options?.[oi];
+  if(!o)return;
   if(field==='points'){
-    const n=Number(value);
-    categoryDraft[index].points=Number.isFinite(n)?Math.max(0,Math.round(n)):0;
-  }else{
-    categoryDraft[index].name=value;
-  }
+    const n=Number(value);o.points=Number.isFinite(n)?Math.max(0,Math.round(n)):0;
+  }else if(field==='amount_ml'){
+    if(value===''){o.amount_ml=null}
+    else{const n=Number(value);o.amount_ml=Number.isFinite(n)?Math.max(1,Math.round(n)):null}
+  }else{o.label=value}
+}
+function addQtyDraft(ci){
+  const c=categoryDraft[ci];if(!c)return;
+  c.quantity_options.push({
+    key:`opt_${crypto.randomUUID()}`,
+    label:'Új mennyiség',
+    amount_ml:null,
+    points:0
+  });
+  renderCategoryDraft();
+}
+function removeQtyDraft(ci,oi){
+  const c=categoryDraft[ci];if(!c)return;
+  if(c.quantity_options.length<=1)return message('adminMsg','Egy kategóriában legalább egy mennyiségi opciónak maradnia kell.',true);
+  c.quantity_options.splice(oi,1);
+  renderCategoryDraft();
 }
 function moveCategoryDraft(index,delta){
   const other=index+delta;
@@ -629,22 +837,36 @@ function moveCategoryDraft(index,delta){
 function removeCategoryDraft(index){
   const c=categoryDraft[index];
   if(!c)return;
-  if(!confirm(`Biztosan eltávolítod ezt a kategóriát?
+  if(!confirm(`Biztosan eltávolítod ezt a főkategóriát?
 
 ${c.name}
 
-A korábbi italok megmaradnak a már tárolt kategórianévvel és ponttal.`))return;
+A korábbi italok megmaradnak a legutóbb mentett nevükkel, mennyiségükkel és pontjukkal.`))return;
   if(c.id)deletedCategoryIds.push(c.id);
   categoryDraft.splice(index,1);
   renderCategoryDraft();
 }
 function addCategoryDraft(){
-  const name=$('newCategoryName').value.trim(),points=Number($('newCategoryPoints').value);
-  if(!name||!Number.isFinite(points)||points<0)return message('adminMsg','Adj meg nevet és érvényes pontot.',true);
-  categoryDraft.push({id:null,name,points:Math.round(points),sort_order:(categoryDraft.length+1)*10});
-  $('newCategoryName').value='';$('newCategoryPoints').value='';
+  const name=$('newCategoryName').value.trim();
+  const label=$('newCategoryQtyLabel').value.trim()||'1 adag';
+  const amountRaw=$('newCategoryAmountMl').value;
+  const points=Number($('newCategoryPoints').value);
+  const amount=amountRaw===''?null:Number(amountRaw);
+  if(!name||!Number.isFinite(points)||points<0)return message('adminMsg','Adj meg főkategória-nevet és érvényes pontot.',true);
+  categoryDraft.push({
+    id:null,
+    name,
+    sort_order:(categoryDraft.length+1)*10,
+    quantity_options:[{
+      key:`opt_${crypto.randomUUID()}`,
+      label,
+      amount_ml:Number.isFinite(amount)&&amount>0?Math.round(amount):null,
+      points:Math.round(points)
+    }]
+  });
+  $('newCategoryName').value='';$('newCategoryQtyLabel').value='';$('newCategoryAmountMl').value='';$('newCategoryPoints').value='';
   renderCategoryDraft();
-  message('adminMsg','Az új kategória bekerült a módosítások közé. A véglegesítéshez nyomd meg a Minden módosítás mentése gombot.');
+  message('adminMsg','Az új főkategória bekerült a módosítások közé. A véglegesítéshez nyomd meg a Minden módosítás mentése gombot.');
 }
 async function saveAllCategories(){
   if(!currentProfile?.is_admin)return;
@@ -653,19 +875,34 @@ async function saveAllCategories(){
   const names=new Set();
   for(const c of categoryDraft){
     c.name=(c.name||'').trim();
-    c.points=Math.max(0,Math.round(Number(c.points)||0));
-    if(!c.name)return message('adminMsg','Minden kategóriának legyen neve.',true);
+    if(!c.name)return message('adminMsg','Minden főkategóriának legyen neve.',true);
     const key=c.name.toLocaleLowerCase('hu-HU');
-    if(names.has(key))return message('adminMsg','Két kategória neve nem lehet ugyanaz.',true);
+    if(names.has(key))return message('adminMsg','Két főkategória neve nem lehet ugyanaz.',true);
     names.add(key);
+
+    if(!Array.isArray(c.quantity_options)||!c.quantity_options.length)
+      return message('adminMsg',`${c.name}: legalább egy mennyiség szükséges.`,true);
+
+    const optionKeys=new Set();
+    for(const o of c.quantity_options){
+      o.key=String(o.key||`opt_${crypto.randomUUID()}`);
+      o.label=(o.label||'').trim();
+      o.points=Math.max(0,Math.round(Number(o.points)||0));
+      if(o.amount_ml!==null&&o.amount_ml!==undefined&&o.amount_ml!==''){
+        const n=Number(o.amount_ml);o.amount_ml=Number.isFinite(n)&&n>0?Math.round(n):null;
+      }else{o.amount_ml=null}
+      if(!o.label)return message('adminMsg',`${c.name}: minden mennyiségnek legyen neve (pl. 3 dl).`,true);
+      if(optionKeys.has(o.key))o.key=`opt_${crypto.randomUUID()}`;
+      optionKeys.add(o.key);
+    }
   }
 
   const payload={
     items:categoryDraft.map((c,i)=>({
       id:c.id,
       name:c.name,
-      points:c.points,
-      sort_order:(i+1)*10
+      sort_order:(i+1)*10,
+      quantity_options:c.quantity_options
     })),
     delete_ids:[...new Set(deletedCategoryIds)]
   };
@@ -674,16 +911,66 @@ async function saveAllCategories(){
   const {error}=await sb.rpc('save_categories_bulk',{payload});
   if(error)return message('adminMsg',error.message,true);
 
-  message('adminMsg','Minden kategóriamódosítás mentve. A korábbi italok és ranglisták pontjai is frissültek.');
+  message('adminMsg','Minden módosítás mentve. A régi italok pontjai is frissültek a hozzájuk tartozó mennyiségi opció alapján.');
   await loadCategories();
   await loadProfile();
   await Promise.all([loadHome(),loadLeaderboard(),loadDrinks(),loadAdminCategories()]);
 }
 async function loadAdminUsers(){
-  const {data,error}=await sb.from('profiles').select('id,display_name,is_admin,points').order('display_name');if(error)return;
-  $('adminUsers').innerHTML=(data||[]).map(u=>`<div class="user-row"><div><b>${esc(u.display_name||'Névtelen')}</b><div class="muted">${u.points||0} pont</div></div><select id="role-${u.id}" ${u.id===currentUser.id?'disabled':''}><option value="false" ${!u.is_admin?'selected':''}>Játékos</option><option value="true" ${u.is_admin?'selected':''}>Admin</option></select><button class="btn small" ${u.id===currentUser.id?'disabled':''} onclick="saveUserRole('${u.id}')">Mentés</button></div>`).join('');
+  const {data,error}=await sb.from('profiles').select('id,display_name,is_admin,points,drink_count').order('display_name');
+  if(error)return $('adminUsers').textContent=error.message;
+
+  $('adminUsers').innerHTML=(data||[]).map(u=>`
+    <div class="user-row">
+      <div>
+        <b>${esc(u.display_name||'Névtelen')}</b>
+        <div class="muted">${u.points||0} pont · 🍻 ${u.drink_count||0} ital</div>
+      </div>
+      <select id="role-${u.id}" ${u.id===currentUser.id?'disabled':''}>
+        <option value="false" ${!u.is_admin?'selected':''}>Játékos</option>
+        <option value="true" ${u.is_admin?'selected':''}>Admin</option>
+      </select>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="btn small" ${u.id===currentUser.id?'disabled':''} onclick="saveUserRole('${u.id}')">Jog mentése</button>
+        <button class="btn danger small" ${u.id===currentUser.id?'disabled':''} onclick="deleteUserAdmin('${u.id}','${esc(u.display_name||'Névtelen').replace(/'/g,'&#39;')}')">🗑️ Felhasználó</button>
+      </div>
+    </div>`).join('');
 }
-async function saveUserRole(id){const val=$(`role-${id}`).value==='true';const {error}=await sb.from('profiles').update({is_admin:val}).eq('id',id);if(error)return alert(error.message);await loadAdminUsers()}
+async function saveUserRole(id){
+  const val=$(`role-${id}`).value==='true';
+  const {error}=await sb.from('profiles').update({is_admin:val}).eq('id',id);
+  if(error)return alert(error.message);
+  await loadAdminUsers();
+}
+async function deleteUserAdmin(id,name){
+  if(!currentProfile?.is_admin||id===currentUser.id)return;
+  if(!confirm(`VÉGLEGES TÖRLÉS
+
+Biztosan törlöd ezt a felhasználót?
+
+${name}
+
+Törlődik az Auth-fiókja, profilja, összes itala és a hozzájuk tartozó képek is.`))return;
+
+  try{
+    const {data,error}=await sb.functions.invoke('admin-user',{
+      body:{action:'delete-user',userId:id}
+    });
+    if(error){
+      let detail=error.message;
+      try{
+        const body=await error.context.json();
+        detail=body?.error||detail;
+      }catch(_){}
+      throw new Error(detail);
+    }
+    if(data?.ok===false)throw new Error(data.error||'A felhasználó törlése sikertelen.');
+    alert(`${name} törölve.`);
+    await Promise.all([loadAdminUsers(),loadHome(),loadLeaderboard(),loadDrinks()]);
+  }catch(e){
+    alert(e.message||String(e));
+  }
+}
 
 if(sb){sb.auth.onAuthStateChange(()=>start());start()}
 </script>
