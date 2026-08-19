@@ -2,8 +2,17 @@
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ItalPont V5.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ItalPont V5.1</title>
+
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0b0d10">
+<meta name="application-name" content="ItalPont">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ItalPont">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/pwa/apple-touch-icon-180.png">
+
 <link rel="icon" type="image/png" href="./assets/app-icon.png">
 <style>
 :root{
@@ -199,6 +208,25 @@ html.native-app .web-photo-input{display:none!important}
 .push-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .push-status{font-weight:800}
 .push-status.ok{color:#34d399}.push-status.warn{color:#fbbf24}.push-status.off{color:#f87171}
+body{
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+}
+.pwa-install-banner{
+  position:fixed;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));
+  bottom:max(12px,calc(env(safe-area-inset-bottom) + 8px));z-index:1200;
+  max-width:520px;margin:0 auto;padding:13px 14px;background:#171a20;border:1px solid #3a404a;
+  border-radius:14px;box-shadow:0 12px 40px #0009;display:none
+}
+.pwa-install-banner.show{display:block}
+.pwa-install-title{font-weight:900;font-size:15px}
+.pwa-install-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.pwa-install-help{margin-top:7px;font-size:12px;color:#aeb4bf}
+.pwa-installed .pwa-install-item{display:none!important}
+@media(display-mode:standalone){.pwa-install-item,.pwa-install-banner{display:none!important}}
+
 @media(max-width:650px){
   .native-photo-actions{grid-template-columns:1fr}
   .native-photo-preview{grid-template-columns:58px 1fr}
@@ -225,15 +253,16 @@ html.native-app .web-photo-input{display:none!important}
 </style>
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
+<script src="./pwa.js"></script>
 </head>
 <body>
-<!-- V50_NATIVE_ANDROID -->
+<!-- V51_WEB_ANDROID_PWA -->
 <div id="publicAuth">
   <div class="shell auth-wrap">
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V5.0</h1>
+        <h1>🍺 ItalPont V5.1</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -274,6 +303,7 @@ html.native-app .web-photo-input{display:none!important}
         <button class="mobile-navbtn" data-mobile-page="upload" onclick="mobileNavigate('upload')">➕ Feltöltés</button>
         <button class="mobile-navbtn" data-mobile-page="profile" onclick="mobileNavigate('profile')">👤 Profilom</button>
         <button id="mobileAdminNav" class="mobile-navbtn admin-mobile hidden" data-mobile-page="admin" onclick="mobileNavigate('admin')">🛠️ Admin</button>
+        <button id="pwaInstallMenu" class="mobile-navbtn pwa-install-item hidden" onclick="ItalPontPWA.install()">📲 Telepítés iPhone-ra / mobilra</button>
         <button class="mobile-navbtn logout-mobile" onclick="logout()">↪ Kijelentkezés</button>
       </div>
     </div>
@@ -497,6 +527,17 @@ html.native-app .web-photo-input{display:none!important}
       </section>
     </main>
   </div>
+</div>
+
+
+<div id="pwaInstallBanner" class="pwa-install-banner">
+  <div class="pwa-install-title">📲 Telepítsd az ItalPontot</div>
+  <div id="pwaInstallText" class="muted" style="margin-top:4px">Használd alkalmazásként a főképernyőről.</div>
+  <div class="pwa-install-actions">
+    <button class="btn small" onclick="ItalPontPWA.install()">Telepítés</button>
+    <button class="btn secondary small" onclick="ItalPontPWA.dismiss()">Most nem</button>
+  </div>
+  <div id="pwaInstallHelp" class="pwa-install-help hidden"></div>
 </div>
 
 <div id="imageModal" class="modal hidden" onclick="closeImageModal(event)">
