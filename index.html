@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.1</title>
+<title>ItalPont V5.2</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b0d10">
@@ -256,13 +256,13 @@ body{
 <script src="./pwa.js"></script>
 </head>
 <body>
-<!-- V51_WEB_ANDROID_PWA -->
+<!-- V52_IOS_PWA_WEB_PUSH -->
 <div id="publicAuth">
   <div class="shell auth-wrap">
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V5.1</h1>
+        <h1>🍺 ItalPont V5.2</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -491,6 +491,20 @@ body{
                   <button class="btn secondary" type="button" onclick="ItalPontNative.enablePush()">Értesítések bekapcsolása</button>
                 </div>
               </div>
+
+              <div id="webPushSettings" class="push-card hidden">
+                <div class="push-row">
+                  <div>
+                    <b>🍎 iPhone / PWA push</b>
+                    <div id="webPushStatus" class="push-status warn" style="margin-top:4px">Állapot ellenőrzése...</div>
+                    <div id="webPushHint" class="muted" style="margin-top:3px">Új ital és új játékos regisztráció esetén.</div>
+                  </div>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap">
+                    <button id="webPushEnableBtn" class="btn secondary" type="button" onclick="ItalPontPWA.enablePush()">Értesítések bekapcsolása</button>
+                    <button id="webPushDisableBtn" class="btn danger hidden" type="button" onclick="ItalPontPWA.disablePush()">Kikapcsolás</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div></div>
@@ -635,6 +649,35 @@ window.removePushToken=async function(token){
   if(error)console.warn('Push token törlése sikertelen:',error);
 };
 
+window.getWebPushPublicKey=async function(){
+  if(!sb)throw new Error('Supabase nincs inicializálva.');
+  const {data,error}=await sb.functions.invoke('webpush-key',{body:{}});
+  if(error){
+    let detail=error.message;
+    try{const b=await error.context?.json?.();detail=b?.error||detail}catch(_){}
+    throw new Error(detail||'A VAPID publikus kulcs nem kérhető le.');
+  }
+  if(!data?.publicKey)throw new Error('Hiányzik a VAPID publikus kulcs.');
+  return data.publicKey;
+};
+window.registerWebPushSubscription=async function(subscription){
+  if(!sb||!currentUser)throw new Error('Nincs bejelentkezve.');
+  const s=subscription?.toJSON?.()||subscription;
+  if(!s?.endpoint||!s?.keys?.p256dh||!s?.keys?.auth)throw new Error('Hiányos Web Push előfizetés.');
+  const {error}=await sb.rpc('register_web_push_subscription',{
+    p_endpoint:s.endpoint,
+    p_p256dh:s.keys.p256dh,
+    p_auth:s.keys.auth,
+    p_user_agent:navigator.userAgent||''
+  });
+  if(error)throw error;
+};
+window.unregisterWebPushSubscription=async function(subscription){
+  if(!sb||!currentUser||!subscription?.endpoint)return;
+  const {error}=await sb.rpc('unregister_web_push_subscription',{p_endpoint:subscription.endpoint});
+  if(error)console.warn('Web Push leiratkozás DB hiba:',error);
+};
+
 async function compressImageFile(file,maxDimension=1600,quality=.82){
   if(!file?.type?.startsWith('image/'))throw new Error('Csak képfájl tölthető fel.');
   if(file.size>30*1024*1024)throw new Error('A kiválasztott kép túl nagy. Maximum 30 MB.');
@@ -737,6 +780,7 @@ async function login(){
   await start();
 }
 async function logout(){
+  try{if(window.ItalPontPWA?.unregisterPush)await window.ItalPontPWA.unregisterPush()}catch(e){console.warn(e)}
   try{if(window.ItalPontNative?.unregisterPush)await window.ItalPontNative.unregisterPush()}catch(e){console.warn(e)}
   if(sb)await sb.auth.signOut();
   location.reload();
@@ -757,6 +801,7 @@ async function start(){
   $('leaderDate').value=localDateInputValue(selectedLeaderDate);
   await loadProfile();await loadCategories();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
   if(window.ItalPontNative?.initPush)window.ItalPontNative.initPush();
+  if(window.ItalPontPWA?.initPush)window.ItalPontPWA.initPush();
   if(currentProfile?.is_admin){
     show('adminNav');show('mobileAdminNav');show('roleBadge');await loadAdmin()
   }else{
