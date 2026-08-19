@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ItalPont V4.7</title>
+<title>ItalPont V4.8</title>
 <style>
 :root{
   --bg:#0b0d10;--panel:#17191e;--panel2:#1d2026;--line:#2a2e36;
@@ -92,6 +92,21 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 .edit-drink-current{padding:10px 12px;border-radius:10px;background:#101217;border:1px solid #303640}
 .statline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .drink-count{color:#d1d5db;font-size:12px;font-weight:700}
+.player-link{cursor:pointer;border-radius:8px;padding:4px 6px;margin:-4px -6px;transition:background .15s ease,transform .15s ease}
+.player-link:hover{background:#ffffff0d;transform:translateX(2px)}
+.player-link:focus{outline:2px solid #8b5cf6;outline-offset:2px}
+.player-link .player-name{font-weight:800;text-decoration:underline;text-decoration-color:#ffffff22;text-underline-offset:3px}
+.inline-player-stats{grid-column:1/-1;margin:0 0 10px 46px;padding:12px 14px;background:#0f1115;border:1px solid #2f3540;border-radius:10px}
+.inline-player-stats.hidden{display:none}
+.inline-stat-grid{display:grid;gap:7px}
+.inline-stat-row{display:grid;grid-template-columns:minmax(140px,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #262a31}
+.inline-stat-row:last-child{border-bottom:0}
+.inline-stat-right{text-align:right}
+.inline-stat-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}
+.inline-stat-head .muted{font-size:12px}
+@media(max-width:650px){.inline-player-stats{margin-left:0}.inline-stat-row{grid-template-columns:1fr auto}}
+
+
 .stats-grid{display:grid;grid-template-columns:minmax(360px,1.1fr) minmax(300px,.9fr);gap:20px;align-items:start}
 .donut-wrap{display:grid;grid-template-columns:minmax(260px,420px) minmax(220px,1fr);gap:22px;align-items:center}
 .donut-box{position:relative;width:min(100%,420px);aspect-ratio:1;margin:auto}
@@ -151,7 +166,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V4.7</h1>
+        <h1>🍺 ItalPont V4.8</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -238,7 +253,31 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
           </div>
           <div id="periodLabel" class="period-label"></div>
           <div id="leaderboard" style="margin-top:12px"></div>
+          <div class="muted" style="margin-top:10px">💡 Kattints egy játékos nevére az elfogyasztott italok lenyitásához.</div>
         </div></div>
+
+        <div id="leaderStatsSection" class="hidden" style="margin-top:18px">
+          <div class="stats-grid">
+            <div class="panel"><div class="panel-pad">
+              <div class="panel-title">
+                <div>
+                  <h2 style="margin-bottom:4px">📊 Elfogyasztott italok</h2>
+                  <div class="muted">Az összesített ranglista teljes fogyasztása kategóriák szerint. A kördiagram az italok darabszámát, a lista a mennyiséget is mutatja.</div>
+                </div>
+              </div>
+              <div id="overallStatsContent" style="margin-top:18px">
+                <div class="stats-empty">Statisztika betöltése...</div>
+              </div>
+            </div></div>
+
+            <div id="playerStatsPanel" class="panel"><div class="panel-pad">
+              <h2>👤 Játékos statisztikája</h2>
+              <div class="muted">Kattints egy névre a ranglistán, vagy válassz játékost a listából.</div>
+              <select id="statsPlayerSelect" style="margin-top:14px" onchange="renderSelectedPlayerStats()"></select>
+              <div id="playerStatsContent"></div>
+            </div></div>
+          </div>
+        </div>
       </section>
 
       <section id="page-stats" class="hidden">
@@ -250,7 +289,7 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
                 <div class="muted">Összesített megoszlás kategóriák szerint. A kördiagram az italok darabszámát mutatja; a listában az elfogyasztott mennyiség is látszik.</div>
               </div>
             </div>
-            <div id="overallStatsContent" style="margin-top:18px">
+            <div id="standaloneOverallStatsContent" style="margin-top:18px">
               <div class="stats-empty">Statisztika betöltése...</div>
             </div>
           </div></div>
@@ -258,8 +297,8 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
           <div class="panel"><div class="panel-pad">
             <h2>👤 Játékosonkénti fogyasztás</h2>
             <div class="muted">Válassz játékost a kategória szerinti bontáshoz.</div>
-            <select id="statsPlayerSelect" style="margin-top:14px" onchange="renderSelectedPlayerStats()"></select>
-            <div id="playerStatsContent"></div>
+            <select id="standaloneStatsPlayerSelect" style="margin-top:14px" onchange="renderStandalonePlayerStats()"></select>
+            <div id="standalonePlayerStatsContent"></div>
           </div></div>
         </div>
       </section>
@@ -496,7 +535,7 @@ async function start(){
   if(!session){show('publicAuth');hide('app');return}
   currentUser=session.user;hide('publicAuth');show('app');
   $('leaderDate').value=localDateInputValue(selectedLeaderDate);
-  await loadProfile();await loadCategories();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);if(!$('page-stats')?.classList.contains('hidden'))await loadStatsPage();
+  await loadProfile();await loadCategories();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
   if(currentProfile?.is_admin){show('adminNav');show('roleBadge');await loadAdmin()}else{hide('adminNav');hide('roleBadge')}
 }
 async function loadProfile(){
@@ -586,7 +625,23 @@ async function fetchLeaderboard(period='all',ref=new Date()){
 }
 function rankRows(rows,limit=null){
   const arr=limit?rows.slice(0,limit):rows;
-  return arr.map((x,i)=>`<div class="score-row"><div class="rank ${i<3?'top':''}">${i+1}</div><div class="namecell"><img class="avatar sm" src="${avatarUrl(x.avatar)}"><div><span>${esc(x.name)}</span><div class="drink-count">🍻 ${x.drinkCount||0} ital</div></div></div><div class="points">${x.points} pont</div></div>`).join('')||'<div class="muted">Nincs adat.</div>';
+  return arr.map((x,i)=>`
+    <div class="score-row">
+      <div class="rank ${i<3?'top':''}">${i+1}</div>
+      <div class="namecell player-link" role="button" tabindex="0"
+           onclick="toggleInlinePlayerStats('${x.id}')"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleInlinePlayerStats('${x.id}')}">
+        <img class="avatar sm" src="${avatarUrl(x.avatar)}">
+        <div>
+          <span class="player-name">${esc(x.name)}</span>
+          <div class="drink-count">🍻 ${x.drinkCount||0} ital</div>
+        </div>
+      </div>
+      <div class="points">${x.points} pont</div>
+    </div>
+    <div id="inline-stats-${x.id}" class="inline-player-stats hidden">
+      <div class="muted">Betöltés...</div>
+    </div>`).join('')||'<div class="muted">Nincs adat.</div>';
 }
 async function loadHome(){
   try{
@@ -597,13 +652,27 @@ async function loadHome(){
   }catch(e){console.error(e)}
 }
 async function setPeriod(period,btn){
-  currentPeriod=period;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');
-  $('historyControls').classList.toggle('hidden',period==='all');await loadLeaderboard();
+  currentPeriod=period;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  $('historyControls').classList.toggle('hidden',period==='all');
+  $('leaderStatsSection').classList.toggle('hidden',period!=='all');
+  await loadLeaderboard();
+  if(period==='all')await loadLeaderboardStats();
 }
 function changeLeaderDate(){const v=$('leaderDate').value;if(v){selectedLeaderDate=new Date(v+'T12:00:00');loadLeaderboard()}}
 function goCurrentPeriod(){selectedLeaderDate=new Date();$('leaderDate').value=localDateInputValue(selectedLeaderDate);loadLeaderboard()}
 function shiftPeriod(dir){if(currentPeriod==='all')return;const d=new Date(selectedLeaderDate);if(currentPeriod==='week')d.setDate(d.getDate()+7*dir);if(currentPeriod==='month')d.setMonth(d.getMonth()+dir);if(currentPeriod==='year')d.setFullYear(d.getFullYear()+dir);selectedLeaderDate=d;$('leaderDate').value=localDateInputValue(d);loadLeaderboard()}
-async function loadLeaderboard(){try{const r=await fetchLeaderboard(currentPeriod,selectedLeaderDate);$('periodLabel').textContent=r.label;$('leaderboard').innerHTML=rankRows(r.rows)}catch(e){$('leaderboard').textContent=e.message}}
+async function loadLeaderboard(){
+  try{
+    const r=await fetchLeaderboard(currentPeriod,selectedLeaderDate);
+    $('periodLabel').textContent=r.label;
+    $('leaderboard').innerHTML=rankRows(r.rows);
+    $('leaderStatsSection').classList.toggle('hidden',currentPeriod!=='all');
+  }catch(e){
+    $('leaderboard').textContent=e.message;
+  }
+}
 
 function feedHtml(d){
   const adminControls=currentProfile?.is_admin?`<div class="drink-admin-actions"><button class="btn secondary small" onclick="openDrinkCategoryEditor(${d.id},event)">✏️ Kategória</button><button class="btn danger small" onclick="deleteDrink(${d.id},event)">🗑️ Törlés</button></div>`:'';
@@ -645,7 +714,7 @@ async function uploadDrink(){
     $('drinkName').value='';$('photo').value='';
     message('uploadMsg',`${opt.label} · +${opt.points} pont! A kép Cloudflare R2-re került.`);
     await loadProfile();
-    await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);if(!$('page-stats')?.classList.contains('hidden'))await loadStatsPage();
+    await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
   }catch(e){
     console.error(e);
     message('uploadMsg',e.message||String(e),true);
@@ -752,7 +821,7 @@ ${data.drink_name}
     console.warn('A kép rekordja törölve, de a tárhelyfájl törlése nem sikerült:',e);
   }
   await loadProfile();
-  await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);if(!$('page-stats')?.classList.contains('hidden'))await loadStatsPage();
+  await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
 }
 function openImage(encoded){$('modalImage').src=decodeURIComponent(encoded);show('imageModal')}
 function closeImageModal(e,force=false){if(force||e.target.id==='imageModal')hide('imageModal')}
@@ -800,7 +869,7 @@ async function saveProfile(){
     croppedAvatarBlob=null;$('avatarFile').value='';
     message('profileMsg','Profil mentve.');
     await loadProfile();
-    await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);if(!$('page-stats')?.classList.contains('hidden'))await loadStatsPage();
+    await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
   }catch(e){
     console.error(e);
     message('profileMsg',e.message||String(e),true);
@@ -935,29 +1004,187 @@ function renderSelectedPlayerStats(){
         </div>`).join('')||'<div class="stats-empty">Ennek a játékosnak még nincs feltöltött itala.</div>'}
     </div>`;
 }
-async function loadStatsPage(){
-  if(!sb||!currentUser)return;
+async function loadLeaderboardStats(preferredUserId=null){
+  if(!sb||!currentUser||currentPeriod!=='all')return;
   try{
     $('overallStatsContent').innerHTML='<div class="stats-empty">Statisztika betöltése...</div>';
     const [{data:drinks,error:de},{data:profiles,error:pe}]=await Promise.all([
       sb.from('drinks').select('id,user_id,category_name,quantity_label,amount_ml,points,created_at'),
       sb.from('profiles').select('id,display_name,points,drink_count,avatar_url')
     ]);
-    if(de)throw de;if(pe)throw pe;
+    if(de)throw de;
+    if(pe)throw pe;
+
     statsCache={drinks:drinks||[],profiles:profiles||[]};
     renderOverallStats();
     populatePlayerStatsSelect();
+
+    if(preferredUserId && statsCache.profiles.some(p=>p.id===preferredUserId)){
+      $('statsPlayerSelect').value=preferredUserId;
+    }
     renderSelectedPlayerStats();
   }catch(e){
     console.error(e);
     $('overallStatsContent').innerHTML=`<div class="msg error">${esc(e.message||String(e))}</div>`;
   }
 }
-window.addEventListener('resize',()=>{
-  if(!$('page-stats')?.classList.contains('hidden')&&statsCache.drinks.length){
-    clearTimeout(window.__statsResizeTimer);
-    window.__statsResizeTimer=setTimeout(renderOverallStats,120);
+async function toggleInlinePlayerStats(userId){
+  const box=$(`inline-stats-${userId}`);
+  if(!box)return;
+
+  if(!box.classList.contains('hidden')){
+    hide(box);
+    return;
   }
+
+  // Close any other open player dropdowns.
+  document.querySelectorAll('.inline-player-stats').forEach(el=>{
+    if(el.id!==`inline-stats-${userId}`)el.classList.add('hidden');
+  });
+
+  show(box);
+
+  // Reuse cached all-time stats if available; otherwise fetch this player's drinks.
+  let profile=statsCache.profiles.find(p=>p.id===userId);
+  let drinks=statsCache.drinks.filter(d=>d.user_id===userId);
+
+  if(!profile || (!statsCache.drinks.length && currentPeriod!=='all')){
+    const [{data:p,error:pe},{data:d,error:de}]=await Promise.all([
+      sb.from('profiles').select('id,display_name,points,drink_count,avatar_url').eq('id',userId).single(),
+      sb.from('drinks').select('id,user_id,category_name,quantity_label,amount_ml,points,created_at').eq('user_id',userId)
+    ]);
+    if(pe||de){
+      box.innerHTML=`<div class="msg error">${esc((pe||de).message)}</div>`;
+      return;
+    }
+    profile=p;
+    drinks=d||[];
+  }
+
+  const rows=aggregateDrinkStats(drinks);
+  const totalMl=rows.reduce((s,r)=>s+r.totalMl,0);
+  const unknown=rows.reduce((s,r)=>s+r.unknownCount,0);
+
+  box.innerHTML=`
+    <div class="inline-stat-head">
+      <div><b>${esc(profile?.display_name||'Névtelen')}</b><div class="muted">🍻 ${drinks.length} ital · ${profile?.points||0} pont</div></div>
+      <div class="muted">${formatConsumedAmount(totalMl,drinks.length,unknown)}</div>
+    </div>
+    <div class="inline-stat-grid">
+      ${rows.map(r=>`
+        <div class="inline-stat-row">
+          <div>
+            <b>${esc(r.category)}</b>
+            <div class="muted">${formatConsumedAmount(r.totalMl,r.count,r.unknownCount)}</div>
+          </div>
+          <div class="inline-stat-right">
+            <b>${r.count} ital</b>
+            <div class="muted">${r.points} pont</div>
+          </div>
+        </div>`).join('') || '<div class="muted">Ennek a játékosnak még nincs feltöltött itala.</div>'}
+    </div>`;
+}
+
+function renderStandaloneOverallStats(){
+  const rows=aggregateDrinkStats(statsCache.drinks);
+  const total=statsCache.drinks.length;
+  if(!rows.length){
+    $('standaloneOverallStatsContent').innerHTML='<div class="stats-empty">Még nincs feltöltött ital.</div>';
+    return;
+  }
+  const totalMl=rows.reduce((s,r)=>s+r.totalMl,0);
+  const unknown=rows.reduce((s,r)=>s+r.unknownCount,0);
+  $('standaloneOverallStatsContent').innerHTML=`
+    <div class="donut-wrap">
+      <div class="donut-box">
+        <canvas id="standaloneOverallDonut"></canvas>
+        <div class="donut-center"><strong>${total}</strong><span>feltöltött ital</span></div>
+      </div>
+      <div>
+        <div class="player-stat-summary">
+          <div class="statline"><b>Összes elfogyasztott mennyiség:</b> <span>${formatConsumedAmount(totalMl,total,unknown)}</span></div>
+        </div>
+        <div class="stats-legend">
+          ${rows.map((r,i)=>`
+            <div class="legend-row">
+              <span class="legend-dot" style="background:${chartPalette(i,rows.length)}"></span>
+              <div><div class="legend-name">${esc(r.category)}</div><div class="legend-sub">${formatConsumedAmount(r.totalMl,r.count,r.unknownCount)}</div></div>
+              <div class="legend-value">${r.count} ital<br><span class="muted">${Math.round(r.count/total*100)}%</span></div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  requestAnimationFrame(()=>drawDonutChart('standaloneOverallDonut',rows));
+}
+function populateStandalonePlayerSelect(){
+  const profiles=[...(statsCache.profiles||[])].sort((a,b)=>(a.display_name||'').localeCompare(b.display_name||'','hu'));
+  const current=$('standaloneStatsPlayerSelect').value;
+  $('standaloneStatsPlayerSelect').innerHTML=profiles.map(p=>`<option value="${p.id}">${esc(p.display_name||'Névtelen')} — ${p.drink_count||0} ital</option>`).join('');
+  if(current && profiles.some(p=>p.id===current))$('standaloneStatsPlayerSelect').value=current;
+  else if(currentUser && profiles.some(p=>p.id===currentUser.id))$('standaloneStatsPlayerSelect').value=currentUser.id;
+}
+function renderStandalonePlayerStats(){
+  const uid=$('standaloneStatsPlayerSelect').value;
+  const profile=statsCache.profiles.find(p=>p.id===uid);
+  const drinks=statsCache.drinks.filter(d=>d.user_id===uid);
+  const rows=aggregateDrinkStats(drinks);
+
+  if(!profile){
+    $('standalonePlayerStatsContent').innerHTML='<div class="stats-empty">Nincs kiválasztott játékos.</div>';
+    return;
+  }
+
+  const totalMl=rows.reduce((s,r)=>s+r.totalMl,0);
+  const unknown=rows.reduce((s,r)=>s+r.unknownCount,0);
+  $('standalonePlayerStatsContent').innerHTML=`
+    <div class="player-stat-summary">
+      <b>${esc(profile.display_name||'Névtelen')}</b>
+      <div class="muted" style="margin-top:4px">🍻 ${drinks.length} ital · ${profile.points||0} pont</div>
+      <div style="margin-top:7px"><b>Elfogyasztott mennyiség:</b> ${formatConsumedAmount(totalMl,drinks.length,unknown)}</div>
+    </div>
+    <div class="player-category-list">
+      ${rows.map(r=>`
+        <div class="player-category-row">
+          <div><b>${esc(r.category)}</b><div class="muted">${formatConsumedAmount(r.totalMl,r.count,r.unknownCount)}</div></div>
+          <div class="right"><b>${r.count} ital</b><div class="muted">${r.points} pont</div></div>
+        </div>`).join('')||'<div class="stats-empty">Ennek a játékosnak még nincs feltöltött itala.</div>'}
+    </div>`;
+}
+async function loadStatsPage(){
+  if(!sb||!currentUser)return;
+  try{
+    $('standaloneOverallStatsContent').innerHTML='<div class="stats-empty">Statisztika betöltése...</div>';
+    const [{data:drinks,error:de},{data:profiles,error:pe}]=await Promise.all([
+      sb.from('drinks').select('id,user_id,category_name,quantity_label,amount_ml,points,created_at'),
+      sb.from('profiles').select('id,display_name,points,drink_count,avatar_url')
+    ]);
+    if(de)throw de;
+    if(pe)throw pe;
+    statsCache={drinks:drinks||[],profiles:profiles||[]};
+    renderStandaloneOverallStats();
+    populateStandalonePlayerSelect();
+    renderStandalonePlayerStats();
+  }catch(e){
+    console.error(e);
+    $('standaloneOverallStatsContent').innerHTML=`<div class="msg error">${esc(e.message||String(e))}</div>`;
+  }
+}
+
+async function refreshStatsIfVisible(){
+  if(currentPeriod==='all' && !$('page-leader')?.classList.contains('hidden')){
+    await loadLeaderboardStats($('statsPlayerSelect')?.value||null);
+  }
+}
+window.addEventListener('resize',()=>{
+  clearTimeout(window.__statsResizeTimer);
+  window.__statsResizeTimer=setTimeout(()=>{
+    if(currentPeriod==='all' && !$('leaderStatsSection')?.classList.contains('hidden') && statsCache.drinks.length){
+      renderOverallStats();
+    }
+    if(!$('page-stats')?.classList.contains('hidden') && statsCache.drinks.length){
+      renderStandaloneOverallStats();
+    }
+  },120);
 });
 
 async function loadAdmin(){await Promise.all([loadAdminCategories(),loadAdminUsers()])}
@@ -1164,7 +1391,7 @@ Törlődik az Auth-fiókja, profilja, összes itala és a hozzájuk tartozó ké
     }
     if(data?.ok===false)throw new Error(data.error||'A felhasználó törlése sikertelen.');
     alert(`${name} törölve.`);
-    await Promise.all([loadAdminUsers(),loadHome(),loadLeaderboard(),loadDrinks()]);if(!$('page-stats')?.classList.contains('hidden'))await loadStatsPage();
+    await Promise.all([loadAdminUsers(),loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
   }catch(e){
     alert(e.message||String(e));
   }
