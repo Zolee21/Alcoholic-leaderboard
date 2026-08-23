@@ -1,11 +1,15 @@
 /**
- * ItalPont V5.0 native Android bridge.
+ * ItalPont V5.3 native Android bridge.
+ * Kamera-stabilitás + Android appRestoredResult kezelés.
  * Weben biztonságosan no-op.
  */
 (() => {
   let selectedPreviewUrl = null;
   let currentPushToken = null;
   let pushInitialized = false;
+  let cameraBusy = false;
+  let restoredListenerInitialized = false;
+  let pendingRestoredCameraResult = null;
 
   const isNative = () => !!window.ItalPontPlatform?.isNative;
   const plugin = name => window.Capacitor?.Plugins?.[name] || null;
@@ -19,13 +23,18 @@
   }
 
   async function resultToFile(result, fallbackName='italpont.jpg'){
-    const webPath=result?.webPath;
+    let webPath=result?.webPath;
+    if(!webPath){
+      const nativePath=result?.uri||result?.path;
+      if(nativePath && window.Capacitor?.convertFileSrc)webPath=window.Capacitor.convertFileSrc(nativePath);
+    }
     if(!webPath)throw new Error('A kiválasztott kép nem olvasható.');
     const response=await fetch(webPath);
     if(!response.ok)throw new Error('A kép beolvasása sikertelen.');
     const blob=await response.blob();
     const format=(result?.metadata?.format||blob.type?.split('/')[1]||'jpg').replace('jpeg','jpg');
-    return new File([blob],`italpont-${Date.now()}.${format}`,{type:blob.type||`image/${format==='jpg'?'jpeg':format}`});
+    const safeName=fallbackName.replace(/\.[^.]+$/,'')||'italpont';
+    return new File([blob],`${safeName}-${Date.now()}.${format}`,{type:blob.type||`image/${format==='jpg'?'jpeg':format}`});
   }
 
   function setNativePhoto(file,webPath){
@@ -45,16 +54,98 @@
     window.setNativeDrinkPhoto?.(null,null);
   }
 
+  function setCameraBusy(busy){
+    cameraBusy=!!busy;
+    const cameraBtn=$('nativeCameraBtn');
+    const galleryBtn=$('nativeGalleryBtn');
+    if(cameraBtn)cameraBtn.disabled=cameraBusy;
+    if(galleryBtn)galleryBtn.disabled=cameraBusy;
+  }
+
+  function navigateToUploadWhenReady(restored=false){
+    let tries=0;
+    const timer=setInterval(()=>{
+      tries++;
+      const app=$('app');
+      const ready=app && !app.classList.contains('hidden') && typeof window.showPage==='function';
+      if(ready){
+        clearInterval(timer);
+        const btn=document.querySelector('.navbtn[data-page="upload"]');
+        window.showPage('upload',btn);
+        if(restored && typeof window.message==='function'){
+          window.message('uploadMsg','A kamerából visszaállított kép megmaradt. Ellenőrizd, majd töltsd fel.');
+        }else if(restored){
+          const msg=$('uploadMsg');
+          if(msg){msg.textContent='A kamerából visszaállított kép megmaradt. Ellenőrizd, majd töltsd fel.';msg.className='msg success';}
+        }
+        localStorage.removeItem('italpont_camera_restore_pending');
+      }else if(tries>=60){
+        clearInterval(timer);
+      }
+    },200);
+  }
+
+  function extractRestoredMedia(event){
+    if(!event?.success || event?.pluginId!=='Camera')return null;
+    const data=event.data;
+    if(!data)return null;
+    if(Array.isArray(data?.results))return data.results[0]||null;
+    if(Array.isArray(data))return data[0]||null;
+    return data;
+  }
+
+  async function flushPendingRestoredPhoto(){
+    if(!pendingRestoredCameraResult || typeof window.setNativeDrinkPhoto!=='function')return false;
+    const result=pendingRestoredCameraResult;
+    pendingRestoredCameraResult=null;
+    try{
+      const file=await resultToFile(result,'camera-restored.jpg');
+      setNativePhoto(file,result?.webPath);
+      localStorage.setItem('italpont_camera_restore_pending','1');
+      navigateToUploadWhenReady(true);
+      return true;
+    }catch(e){
+      console.error('Visszaállított kamerakép feldolgozási hiba:',e);
+      return false;
+    }
+  }
+
+  async function initRestoredResultListener(){
+    if(!isNative() || restoredListenerInitialized)return;
+    const App=plugin('App');
+    if(!App?.addListener)return;
+    restoredListenerInitialized=true;
+
+    await App.addListener('appRestoredResult',async event=>{
+      if(event?.pluginId!=='Camera')return;
+      if(!event.success){
+        console.warn('Camera restored result hiba:',event?.error);
+        return;
+      }
+      const result=extractRestoredMedia(event);
+      if(!result)return;
+      pendingRestoredCameraResult=result;
+      // A restored event nagyon korán érkezhet, ezért késleltetve is próbáljuk.
+      for(let i=0;i<40 && pendingRestoredCameraResult;i++){
+        if(await flushPendingRestoredPhoto())break;
+        await new Promise(r=>setTimeout(r,150));
+      }
+    });
+  }
+
   async function takeDrinkPhoto(){
-    if(!isNative())return;
+    if(!isNative()||cameraBusy)return;
     const Camera=plugin('Camera');
     if(!Camera)throw new Error('A Camera plugin nincs szinkronizálva. Futtasd: npm run android:update');
 
+    setCameraBusy(true);
     try{
       let result;
       if(typeof Camera.takePhoto==='function'){
         result=await Camera.takePhoto({
-          quality:92,
+          quality:82,
+          targetWidth:1600,
+          targetHeight:1600,
           correctOrientation:true,
           saveToGallery:false,
           cameraDirection:'REAR',
@@ -63,7 +154,9 @@
         });
       }else{
         result=await Camera.getPhoto({
-          quality:92,
+          quality:82,
+          width:1600,
+          height:1600,
           resultType:'uri',
           source:'CAMERA',
           direction:'REAR',
@@ -72,32 +165,40 @@
         });
       }
       const file=await resultToFile(result,'camera.jpg');
-      setNativePhoto(file,result.webPath);
+      setNativePhoto(file,result?.webPath);
+      navigateToUploadWhenReady(false);
     }catch(e){
       if(String(e?.message||e).toLowerCase().includes('cancel'))return;
       alert(`Kamera hiba: ${e?.message||e}`);
+    }finally{
+      setCameraBusy(false);
     }
   }
 
   async function chooseDrinkPhoto(){
-    if(!isNative())return;
+    if(!isNative()||cameraBusy)return;
     const Camera=plugin('Camera');
     if(!Camera)throw new Error('A Camera plugin nincs szinkronizálva. Futtasd: npm run android:update');
 
+    setCameraBusy(true);
     try{
       let result;
       if(typeof Camera.chooseFromGallery==='function'){
         const picked=await Camera.chooseFromGallery({
           mediaType:0,
           allowMultipleSelection:false,
-          quality:92,
+          quality:82,
+          targetWidth:1600,
+          targetHeight:1600,
           editable:'no',
           includeMetadata:true
         });
         result=picked?.results?.[0];
       }else{
         result=await Camera.getPhoto({
-          quality:92,
+          quality:82,
+          width:1600,
+          height:1600,
           resultType:'uri',
           source:'PHOTOS',
           correctOrientation:true
@@ -105,10 +206,13 @@
       }
       if(!result)return;
       const file=await resultToFile(result,'gallery.jpg');
-      setNativePhoto(file,result.webPath);
+      setNativePhoto(file,result?.webPath);
+      navigateToUploadWhenReady(false);
     }catch(e){
       if(String(e?.message||e).toLowerCase().includes('cancel'))return;
       alert(`Galéria hiba: ${e?.message||e}`);
+    }finally{
+      setCameraBusy(false);
     }
   }
 
@@ -238,6 +342,13 @@
     clearDrinkPhotoPreviewOnly,
     initPush,
     enablePush,
-    unregisterPush
+    unregisterPush,
+    flushPendingRestoredPhoto
   };
+
+  initRestoredResultListener().catch(e=>console.warn('App restored listener:',e));
+  window.addEventListener('load',()=>{
+    flushPendingRestoredPhoto().catch(e=>console.warn(e));
+    if(localStorage.getItem('italpont_camera_restore_pending')==='1')navigateToUploadWhenReady(true);
+  });
 })();

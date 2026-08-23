@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'italpont-v5.2-shell-1';
+const CACHE_VERSION = 'italpont-v5.3.0-shell-1';
 const SHELL = [
   './','./index.html','./platform.js','./native.js','./pwa.js','./manifest.webmanifest',
   './assets/kulturfarm-banner.jpg','./assets/app-icon.png',

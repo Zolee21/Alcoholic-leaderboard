@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.2</title>
+<title>ItalPont V5.3</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b0d10">
@@ -225,6 +225,17 @@ body{
 .pwa-install-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .pwa-install-help{margin-top:7px;font-size:12px;color:#aeb4bf}
 .pwa-installed .pwa-install-item{display:none!important}
+.auth-mode-hint{margin-top:10px;font-size:13px;color:#9ca3af}
+.connection-banner{
+  position:fixed;left:50%;transform:translateX(-50%);top:max(10px,env(safe-area-inset-top));
+  z-index:2500;width:min(92vw,620px);padding:10px 12px;border-radius:12px;
+  background:#241b0d;border:1px solid #7c5a18;box-shadow:0 12px 34px #0008;
+  display:none;align-items:center;gap:10px
+}
+.connection-banner.show{display:flex}
+.connection-banner .text{flex:1;font-size:13px}
+.connection-banner.offline{background:#2b1515;border-color:#8f3232}
+
 @media(display-mode:standalone){.pwa-install-item,.pwa-install-banner{display:none!important}}
 
 @media(max-width:650px){
@@ -256,20 +267,29 @@ body{
 <script src="./pwa.js"></script>
 </head>
 <body>
-<!-- V52_IOS_PWA_WEB_PUSH -->
+<!-- V530_CAMERA_STABILITY_AUTHUX -->
+<div id="connectionBanner" class="connection-banner">
+  <div id="connectionBannerText" class="text">Kapcsolódási probléma.</div>
+  <button class="btn secondary small" type="button" onclick="retryAppLoad()">Újrapróbálás</button>
+</div>
+
 <div id="publicAuth">
   <div class="shell auth-wrap">
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V5.2</h1>
+        <h1>🍺 ItalPont V5.3</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
           <div><label>Jelszó</label><input id="password" type="password" autocomplete="current-password"></div>
-          <div><label>Megjelenített név</label><input id="displayName"></div>
+          <div id="displayNameRow" class="hidden"><label>Megjelenített név</label><input id="displayName" autocomplete="nickname" placeholder="Ezt látják majd a ranglistán"></div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:12px"><button class="btn full" onclick="login()">Belépés</button><button class="btn secondary full" onclick="register()">Regisztráció</button></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button id="authPrimaryBtn" class="btn full" onclick="login()">Belépés</button>
+          <button id="authSecondaryBtn" class="btn secondary full" onclick="setAuthMode('register')">Első regisztráció</button>
+        </div>
+        <div id="authModeHint" class="auth-mode-hint">Belépéshez csak email és jelszó kell.</div>
         <div id="authMsg" class="msg hidden"></div>
       </div>
     </div>
@@ -444,8 +464,8 @@ body{
               </div>
               <div class="native-only">
                 <div class="native-photo-actions">
-                  <button class="btn secondary" type="button" onclick="ItalPontNative.takeDrinkPhoto()">📷 Kamera</button>
-                  <button class="btn secondary" type="button" onclick="ItalPontNative.chooseDrinkPhoto()">🖼️ Galéria</button>
+                  <button id="nativeCameraBtn" class="btn secondary" type="button" onclick="ItalPontNative.takeDrinkPhoto()">📷 Kamera</button>
+                  <button id="nativeGalleryBtn" class="btn secondary" type="button" onclick="ItalPontNative.chooseDrinkPhoto()">🖼️ Galéria</button>
                 </div>
                 <div id="nativePhotoPreview" class="native-photo-preview">
                   <img id="nativePhotoPreviewImg" alt="Kiválasztott kép">
@@ -453,7 +473,7 @@ body{
                   <button class="btn danger small" type="button" onclick="ItalPontNative.clearDrinkPhoto()">Eltávolítás</button>
                 </div>
               </div>
-              <div class="muted" style="margin-top:7px">Automatikusan max. 1600 px-re és WebP-re tömörítjük, majd Cloudflare R2-re töltjük.</div>
+              <div class="muted" style="margin-top:7px">A kamera már eleve max. 1600 px-es képet ad vissza, majd feltöltés előtt WebP-re optimalizáljuk. Android újraindítás esetén a kameraképet is megpróbáljuk visszaállítani.</div>
             </div>
           </div>
           <button class="btn" style="margin-top:12px" onclick="uploadDrink()">Feltöltés és pont hozzáadása</button>
@@ -604,6 +624,8 @@ body{
 const SUPABASE_URL="https://wqtldrwvharmlkqqfdmk.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_oCTAIcer2GaXeokcd6JN8A_ulUZh8QN";
 let sb=null,currentUser=null,currentProfile=null,categories=[],currentPeriod='week',selectedLeaderDate=new Date();
+let appStartPromise=null;
+let appStartedUserId=null;
 let categoryDraft=[],deletedCategoryIds=[];
 let editingDrink=null;
 let statsCache={drinks:[],profiles:[]};
@@ -620,6 +642,65 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&l
 function avatarUrl(url){return url||'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#2b3140"/><circle cx="50" cy="38" r="18" fill="#fbbf24"/><path d="M18 90c5-25 20-35 32-35s27 10 32 35" fill="#fbbf24"/></svg>`)}
 function localDateInputValue(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
 function huDate(d){return d.toLocaleDateString('hu-HU',{year:'numeric',month:'2-digit',day:'2-digit'})}
+
+let authMode='login';
+function setAuthMode(mode='login'){
+  authMode=mode==='register'?'register':'login';
+  const registering=authMode==='register';
+  $('displayNameRow')?.classList.toggle('hidden',!registering);
+  const password=$('password');
+  if(password)password.autocomplete=registering?'new-password':'current-password';
+  const primary=$('authPrimaryBtn'),secondary=$('authSecondaryBtn'),hint=$('authModeHint');
+  if(primary){
+    primary.textContent=registering?'Fiók létrehozása':'Belépés';
+    primary.onclick=registering?register:login;
+  }
+  if(secondary){
+    secondary.textContent=registering?'Vissza a belépéshez':'Első regisztráció';
+    secondary.onclick=registering?()=>setAuthMode('login'):()=>setAuthMode('register');
+  }
+  if(hint)hint.textContent=registering
+    ?'A nevet csak az első regisztrációnál kérjük. Később a Profilom oldalon módosítható.'
+    :'Belépéshez csak email és jelszó kell.';
+  if(registering)setTimeout(()=>$('displayName')?.focus(),0);
+}
+
+function withTimeout(promise,ms=12000,label='Művelet'){
+  let timer;
+  const timeout=new Promise((_,reject)=>{
+    timer=setTimeout(()=>reject(new Error(`${label}: időtúllépés. Ellenőrizd az internetkapcsolatot, majd próbáld újra.`)),ms);
+  });
+  return Promise.race([Promise.resolve(promise),timeout]).finally(()=>clearTimeout(timer));
+}
+function showConnectionBanner(text,offline=false){
+  const banner=$('connectionBanner'),label=$('connectionBannerText');
+  if(!banner)return;
+  if(label)label.textContent=text||'Kapcsolódási probléma.';
+  banner.classList.add('show');
+  banner.classList.toggle('offline',!!offline);
+}
+function hideConnectionBanner(){
+  const banner=$('connectionBanner');
+  if(banner){banner.classList.remove('show','offline')}
+}
+async function retryAppLoad(){
+  if(!sb)return;
+  hideConnectionBanner();
+  appStartedUserId=null;
+  try{
+    const {data,error}=await withTimeout(sb.auth.getSession(),8000,'Munkamenet ellenőrzése');
+    if(error)throw error;
+    await start(data?.session||null);
+  }catch(e){
+    console.error(e);
+    showConnectionBanner(e.message||'Az alkalmazás nem érhető el. Próbáld újra.');
+  }
+}
+window.addEventListener('offline',()=>showConnectionBanner('Nincs internetkapcsolat. Az ItalPont újra próbálkozik, amikor visszatér a hálózat.',true));
+window.addEventListener('online',()=>{
+  hideConnectionBanner();
+  if(currentUser)setTimeout(()=>void retryAppLoad(),350);
+});
 
 window.setNativeDrinkPhoto=function(file,previewUrl){
   nativeDrinkPhotoFile=file||null;
@@ -768,16 +849,43 @@ function openLeaderPage(period){
 async function register(){
   if(!sb)return message('authMsg','Előbb add meg a Supabase URL-t és anon kulcsot az index.html-ben.',true);
   const email=$('email').value.trim(),password=$('password').value,name=$('displayName').value.trim();
-  if(!email||password.length<6||!name)return message('authMsg','Tölts ki minden mezőt; a jelszó legalább 6 karakter legyen.',true);
-  const {error}=await sb.auth.signUp({email,password,options:{data:{display_name:name}}});
-  if(error)return message('authMsg',error.message,true);
-  message('authMsg','Regisztráció sikeres. Ha email-megerősítés aktív, ellenőrizd a levelezésed.');
+  if(!email||password.length<6||!name)return message('authMsg','A regisztrációhoz email, legalább 6 karakteres jelszó és név szükséges.',true);
+  try{
+    message('authMsg','Regisztráció...');
+    const {data,error}=await withTimeout(
+      sb.auth.signUp({email,password,options:{data:{display_name:name}}}),
+      12000,
+      'Regisztráció'
+    );
+    if(error)throw error;
+    if(data?.session){
+      await start(data.session);
+      return;
+    }
+    setAuthMode('login');
+    $('password').value='';
+    message('authMsg','Regisztráció sikeres. Ha email-megerősítés aktív, ellenőrizd a levelezésed.');
+  }catch(e){
+    message('authMsg',e.message||String(e),true);
+  }
 }
 async function login(){
   if(!sb)return message('authMsg','Előbb add meg a Supabase beállításokat.',true);
-  const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
-  if(error)return message('authMsg',error.message,true);
-  await start();
+  const email=$('email').value.trim(),password=$('password').value;
+  if(!email||!password)return message('authMsg','Add meg az emailcímet és a jelszót.',true);
+  try{
+    message('authMsg','Belépés...');
+    const {data,error}=await withTimeout(
+      sb.auth.signInWithPassword({email,password}),
+      12000,
+      'Belépés'
+    );
+    if(error)throw error;
+    hideConnectionBanner();
+    if(data?.session)await start(data.session);
+  }catch(e){
+    message('authMsg',e.message||String(e),true);
+  }
 }
 async function logout(){
   try{if(window.ItalPontPWA?.unregisterPush)await window.ItalPontPWA.unregisterPush()}catch(e){console.warn(e)}
@@ -793,24 +901,75 @@ document.addEventListener('change',e=>{
   }
 });
 
-async function start(){
+async function start(sessionOverride){
   if(!sb)return;
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session){show('publicAuth');hide('app');return}
-  currentUser=session.user;hide('publicAuth');show('app');
-  $('leaderDate').value=localDateInputValue(selectedLeaderDate);
-  await loadProfile();await loadCategories();await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
-  if(window.ItalPontNative?.initPush)window.ItalPontNative.initPush();
-  if(window.ItalPontPWA?.initPush)window.ItalPontPWA.initPush();
-  if(currentProfile?.is_admin){
-    show('adminNav');show('mobileAdminNav');show('roleBadge');await loadAdmin()
-  }else{
-    hide('adminNav');hide('mobileAdminNav');hide('roleBadge')
-  }
+  if(appStartPromise)return appStartPromise;
+
+  appStartPromise=(async()=>{
+    let session=sessionOverride;
+    if(session===undefined){
+      const {data,error}=await withTimeout(sb.auth.getSession(),8000,'Munkamenet ellenőrzése');
+      if(error)throw error;
+      session=data?.session||null;
+    }
+
+    if(!session){
+      currentUser=null;
+      currentProfile=null;
+      appStartedUserId=null;
+      show('publicAuth');
+      hide('app');
+      hideConnectionBanner();
+      setAuthMode('login');
+      return;
+    }
+
+    currentUser=session.user;
+    hide('publicAuth');
+    show('app');
+    $('leaderDate').value=localDateInputValue(selectedLeaderDate);
+
+    await withTimeout(loadProfile(),10000,'Profil betöltése');
+    await withTimeout(loadCategories(),10000,'Kategóriák betöltése');
+    await withTimeout(Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]),15000,'Főoldal betöltése');
+    await withTimeout(refreshStatsIfVisible(),10000,'Statisztikák betöltése');
+
+    if(window.ItalPontNative?.initPush)window.ItalPontNative.initPush();
+    if(window.ItalPontPWA?.initPush)window.ItalPontPWA.initPush();
+
+    if(currentProfile?.is_admin){
+      show('adminNav');
+      show('mobileAdminNav');
+      show('roleBadge');
+      await withTimeout(loadAdmin(),15000,'Admin felület betöltése');
+    }else{
+      hide('adminNav');
+      hide('mobileAdminNav');
+      hide('roleBadge');
+    }
+
+    appStartedUserId=currentUser.id;
+    hideConnectionBanner();
+
+    // Ha Android a kamera közben újraindította az Activity-t, itt már biztosan
+    // készen áll a feltöltési felület a visszaállított képhez.
+    window.ItalPontNative?.flushPendingRestoredPhoto?.();
+  })().catch(e=>{
+    console.error('ItalPont indítási hiba:',e);
+    showConnectionBanner(e.message||'Az ItalPont nem tudta betölteni az adatokat. Próbáld újra.');
+    if(!$('app') || $('app').classList.contains('hidden')){
+      show('publicAuth');
+      message('authMsg','Az alkalmazás nem tudta betölteni az adatokat. Próbáld újra.',true);
+    }
+  }).finally(()=>{
+    appStartPromise=null;
+  });
+
+  return appStartPromise;
 }
 async function loadProfile(){
   const {data,error}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
-  if(error)return console.error(error);
+  if(error)throw error;
   currentProfile=data;
   $('navAvatar').src=avatarUrl(data.avatar_url);$('navName').textContent=data.display_name||'Játékos';$('navPoints').textContent=`${data.points||0} pont · ${data.drink_count||0} ital`;
   $('profileAvatar').src=avatarUrl(data.avatar_url);$('profileName').value=data.display_name||'';$('profileScore').textContent=`${data.points||0} összpont · ${data.drink_count||0} feltöltött ital`;
@@ -868,7 +1027,7 @@ function updateQuantityReadout(){
 
 async function loadCategories(){
   const {data,error}=await sb.from('categories').select('*').order('sort_order',{ascending:true}).order('name',{ascending:true});
-  if(error)return console.error(error);
+  if(error)throw error;
   categories=data||[];
   $('category').innerHTML=categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   $('quantitySlider').value='0';
@@ -1714,7 +1873,67 @@ Törlődik az Auth-fiókja, profilja, összes itala és a hozzájuk tartozó ké
   }
 }
 
-if(sb){sb.auth.onAuthStateChange(()=>start());start()}
+if(sb){
+  sb.auth.onAuthStateChange((event,session)=>{
+    // FONTOS: Supabase API-hívást nem indítunk közvetlenül ebben a callbackben.
+    // A Supabase dokumentáció szerint ez deadlockot okozhat.
+    if(event==='SIGNED_OUT'){
+      currentUser=null;
+      currentProfile=null;
+      appStartedUserId=null;
+      show('publicAuth');
+      hide('app');
+      setAuthMode('login');
+      return;
+    }
+
+    if(event==='TOKEN_REFRESHED'){
+      // Tokenfrissítéskor nincs szükség az egész app újratöltésére.
+      if(session?.user)currentUser=session.user;
+      return;
+    }
+
+    if(event==='INITIAL_SESSION'){
+      if(!session){
+        currentUser=null;
+        currentProfile=null;
+        appStartedUserId=null;
+        show('publicAuth');
+        hide('app');
+        return;
+      }
+      setTimeout(()=>{void start(session)},0);
+      return;
+    }
+
+    if(event==='SIGNED_IN'){
+      // SIGNED_IN több alkalommal is érkezhet (pl. fókuszváltáskor).
+      // Csak akkor bootolunk újra, ha tényleg szükséges.
+      const needsBoot=!currentUser
+        || currentUser.id!==session?.user?.id
+        || appStartedUserId!==session?.user?.id
+        || $('app')?.classList.contains('hidden');
+      if(needsBoot&&session)setTimeout(()=>{void start(session)},0);
+      return;
+    }
+
+    if(event==='USER_UPDATED'&&session?.user){
+      currentUser=session.user;
+      setTimeout(()=>{if(currentUser)void loadProfile()},0);
+    }
+  });
+}
+
+setAuthMode('login');
+['email','password','displayName'].forEach(id=>{
+  $(id)?.addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+    e.preventDefault();
+    if(authMode==='register')register();
+    else login();
+  });
+});
+
 </script>
 </body>
 </html>
