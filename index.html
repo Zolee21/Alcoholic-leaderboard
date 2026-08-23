@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.4</title>
+<title>ItalPont V5.4.1</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b0d10">
@@ -229,6 +229,19 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 .mobile-menu .mobile-navbtn.admin-mobile{grid-column:1/-1;background:#2a2110;border-color:#66521b}
 .mobile-menu .mobile-navbtn.logout-mobile{grid-column:1/-1;text-align:center}
 .native-only{display:none!important}
+.web-photo-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.web-photo-actions .btn{width:100%}
+.web-photo-file{display:none!important}
+.web-photo-preview{
+  display:none;margin-top:10px;padding:10px 12px;background:#0f1115;border:1px solid #313640;
+  border-radius:10px;align-items:center;gap:10px
+}
+.web-photo-preview.show{display:flex}
+.web-photo-preview img{width:54px;height:54px;object-fit:cover;border-radius:8px;border:1px solid #3a404a}
+.web-photo-preview .filemeta{min-width:0;flex:1}
+.web-photo-preview .filemeta b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:520px){.web-photo-actions{grid-template-columns:1fr}}
+
 html.native-app .native-only{display:block!important}
 html.native-app .web-photo-input{display:none!important}
 .native-photo-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px}
@@ -300,7 +313,7 @@ body{
 <script src="./pwa.js"></script>
 </head>
 <body>
-<!-- V540_CHALLENGES_COMMENTS -->
+<!-- V541_IPHONE_GALLERY_FIX -->
 <div id="connectionBanner" class="connection-banner">
   <div id="connectionBannerText" class="text">Kapcsolódási probléma.</div>
   <button class="btn secondary small" type="button" onclick="retryAppLoad()">Újrapróbálás</button>
@@ -311,7 +324,7 @@ body{
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V5.4</h1>
+        <h1>🍺 ItalPont V5.4.1</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -515,7 +528,25 @@ body{
             <div>
               <label>Fotó</label>
               <div class="web-photo-input">
-                <input id="photo" type="file" accept="image/*" capture="environment">
+                <div class="web-photo-actions">
+                  <button class="btn secondary" type="button" onclick="$('photoCamera').click()">📷 Kamera</button>
+                  <button class="btn secondary" type="button" onclick="$('photo').click()">🖼️ Galéria</button>
+                </div>
+
+                <!-- Kamera: capture attribútummal új fotót kér -->
+                <input id="photoCamera" class="web-photo-file" type="file" accept="image/*" capture="environment">
+
+                <!-- Galéria: SZÁNDÉKOSAN nincs capture attribútum -->
+                <input id="photo" class="web-photo-file" type="file" accept="image/*">
+
+                <div id="webPhotoPreview" class="web-photo-preview">
+                  <img id="webPhotoPreviewImg" alt="Kiválasztott kép">
+                  <div class="filemeta">
+                    <b id="webPhotoName">Kép</b>
+                    <div id="webPhotoMeta" class="muted"></div>
+                  </div>
+                  <button class="btn danger small" type="button" onclick="clearWebDrinkPhoto()">Eltávolítás</button>
+                </div>
               </div>
               <div class="native-only">
                 <div class="native-photo-actions">
@@ -528,7 +559,7 @@ body{
                   <button class="btn danger small" type="button" onclick="ItalPontNative.clearDrinkPhoto()">Eltávolítás</button>
                 </div>
               </div>
-              <div class="muted" style="margin-top:7px">A kamera már eleve max. 1600 px-es képet ad vissza, majd feltöltés előtt WebP-re optimalizáljuk. Android újraindítás esetén a kameraképet is megpróbáljuk visszaállítani.</div>
+              <div class="muted" style="margin-top:7px">Androidon és iPhone-on külön választható a Kamera és a Galéria. Feltöltés előtt a képet max. 1600 px-re és WebP-re optimalizáljuk. Android újraindítás esetén a kameraképet is megpróbáljuk visszaállítani.</div>
             </div>
           </div>
           <button class="btn" style="margin-top:12px" onclick="uploadDrink()">Feltöltés és pont hozzáadása</button>
@@ -686,6 +717,8 @@ let editingDrink=null;
 let statsCache={drinks:[],profiles:[]};
 let croppedAvatarBlob=null,cropObjectUrl=null;
 let nativeDrinkPhotoFile=null;
+let webDrinkPhotoFile=null;
+let webDrinkPhotoPreviewUrl=null;
 let activeChallenges=[];
 const crop={img:null,minScale:1,scale:1,x:0,y:0,drag:false,lastX:0,lastY:0};
 const $=id=>document.getElementById(id);
@@ -772,8 +805,42 @@ window.setNativeDrinkPhoto=function(file,previewUrl){
   if(meta)meta.textContent=`${(file.size/1024/1024).toFixed(2)} MB · ${file.type||'kép'}`;
   box.classList.add('show');
 };
+function setWebDrinkPhoto(file){
+  if(webDrinkPhotoPreviewUrl){
+    try{URL.revokeObjectURL(webDrinkPhotoPreviewUrl)}catch(_){}
+    webDrinkPhotoPreviewUrl=null;
+  }
+  webDrinkPhotoFile=file||null;
+
+  const box=$('webPhotoPreview'),img=$('webPhotoPreviewImg'),name=$('webPhotoName'),meta=$('webPhotoMeta');
+  if(!box)return;
+
+  if(!file){
+    box.classList.remove('show');
+    if(img)img.removeAttribute('src');
+    if(name)name.textContent='Kép';
+    if(meta)meta.textContent='';
+    return;
+  }
+
+  webDrinkPhotoPreviewUrl=URL.createObjectURL(file);
+  if(img)img.src=webDrinkPhotoPreviewUrl;
+  if(name)name.textContent=file.name||'ital-foto.jpg';
+  if(meta)meta.textContent=`${(file.size/1024/1024).toFixed(2)} MB · ${file.type||'kép'}`;
+  box.classList.add('show');
+
+  // Web/PWA választásnál a natív előnézet ne maradjon aktív.
+  nativeDrinkPhotoFile=null;
+  window.ItalPontNative?.clearDrinkPhotoPreviewOnly?.();
+}
+function clearWebDrinkPhoto(){
+  const gallery=$('photo'),camera=$('photoCamera');
+  if(gallery)gallery.value='';
+  if(camera)camera.value='';
+  setWebDrinkPhoto(null);
+}
 window.getSelectedDrinkPhoto=function(){
-  return nativeDrinkPhotoFile || $('photo')?.files?.[0] || null;
+  return nativeDrinkPhotoFile || webDrinkPhotoFile || null;
 };
 window.savePushToken=async function(token){
   if(!sb||!currentUser||!token)return;
@@ -952,9 +1019,19 @@ async function logout(){
 }
 
 document.addEventListener('change',e=>{
-  if(e.target?.id==='photo' && e.target.files?.length){
-    nativeDrinkPhotoFile=null;
-    window.ItalPontNative?.clearDrinkPhotoPreviewOnly?.();
+  if((e.target?.id==='photo' || e.target?.id==='photoCamera') && e.target.files?.length){
+    const file=e.target.files[0];
+    setWebDrinkPhoto(file);
+
+    // Csak az éppen használt input maradjon kiválasztva.
+    // Így ugyanaz a fájl később újra kiválasztható a másik forrásból is.
+    if(e.target.id==='photo'){
+      const camera=$('photoCamera');
+      if(camera)camera.value='';
+    }else{
+      const gallery=$('photo');
+      if(gallery)gallery.value='';
+    }
   }
 });
 
@@ -1406,7 +1483,7 @@ async function uploadDrink(){
       throw error;
     }
 
-    $('drinkName').value='';if($('photo'))$('photo').value='';nativeDrinkPhotoFile=null;window.ItalPontNative?.clearDrinkPhoto();
+    $('drinkName').value='';clearWebDrinkPhoto();nativeDrinkPhotoFile=null;window.ItalPontNative?.clearDrinkPhoto();
     message('uploadMsg',`${opt.label} · +${opt.points} pont! A kép Cloudflare R2-re került.`);
     await loadProfile();
     await Promise.all([loadHome(),loadLeaderboard(),loadDrinks(),loadChallenges()]);await refreshStatsIfVisible();
