@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.3</title>
+<title>ItalPont V5.4</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b0d10">
@@ -102,6 +102,39 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 .edit-drink-current{padding:10px 12px;border-radius:10px;background:#101217;border:1px solid #303640}
 .statline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .drink-count{color:#d1d5db;font-size:12px;font-weight:700}
+.challenge-count{color:#c4b5fd;font-size:12px;font-weight:700;margin-top:2px}
+.challenge-list{display:grid;gap:12px}
+.challenge-card{background:#101319;border:1px solid #303640;border-radius:13px;padding:14px}
+.challenge-card.completed{border-color:#177c5b;background:linear-gradient(135deg,#0e241d,#101319)}
+.challenge-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.challenge-type{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#aeb4bf;font-weight:900}
+.challenge-title{font-size:17px;font-weight:900;margin-top:3px}
+.challenge-reward{white-space:nowrap;color:var(--yellow);font-weight:900}
+.challenge-progress{height:9px;background:#252932;border-radius:999px;overflow:hidden;margin-top:11px}
+.challenge-progress>span{display:block;height:100%;background:linear-gradient(90deg,#7c3aed,#fbbf24);border-radius:999px}
+.challenge-foot{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font-size:12px;color:#aeb4bf}
+.challenge-done{color:#34d399;font-weight:900}
+.challenge-home .challenge-card{padding:11px}
+.challenge-home .challenge-title{font-size:14px}
+.challenge-home .challenge-progress{height:7px}
+
+.feed-wrap{border-bottom:1px solid #292d34}
+.feed-wrap:last-child{border-bottom:0}
+.feed-wrap .feed-card{border-bottom:0}
+.comment-toggle{margin-top:8px;background:transparent;border:0;padding:0;color:#c4b5fd;font-weight:800}
+.comments-panel{margin:0 0 12px 92px;padding:12px;background:#0f1115;border:1px solid #2c323b;border-radius:11px}
+.comment-list{display:grid;gap:9px}
+.comment-row{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:9px;align-items:start}
+.comment-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #454b56}
+.comment-body{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:2px;font-size:14px}
+.comment-meta{font-size:11px;color:#8f96a3;margin-top:3px}
+.comment-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:11px}
+.comment-form input{min-width:0}
+@media(max-width:760px){
+  .comments-panel{margin-left:0}
+  .comment-form{grid-template-columns:1fr}
+}
+
 .player-link{cursor:pointer;border-radius:8px;padding:4px 6px;margin:-4px -6px;transition:background .15s ease,transform .15s ease}
 .player-link:hover{background:#ffffff0d;transform:translateX(2px)}
 .player-link:focus{outline:2px solid #8b5cf6;outline-offset:2px}
@@ -267,7 +300,7 @@ body{
 <script src="./pwa.js"></script>
 </head>
 <body>
-<!-- V530_CAMERA_STABILITY_AUTHUX -->
+<!-- V540_CHALLENGES_COMMENTS -->
 <div id="connectionBanner" class="connection-banner">
   <div id="connectionBannerText" class="text">Kapcsolódási probléma.</div>
   <button class="btn secondary small" type="button" onclick="retryAppLoad()">Újrapróbálás</button>
@@ -278,7 +311,7 @@ body{
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V5.3</h1>
+        <h1>🍺 ItalPont V5.4</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -304,6 +337,7 @@ body{
       <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" onclick="toggleMobileMenu()" aria-expanded="false">☰ Menü</button>
       <div class="navlinks">
         <button class="navbtn active" data-page="home" onclick="showPage('home',this)">🏠 Főoldal</button>
+        <button class="navbtn" data-page="challenges" onclick="showPage('challenges',this);loadChallenges()">🎯 Challengek</button>
         <button class="navbtn" data-page="leader" onclick="showPage('leader',this)">🏆 Ranglisták</button>
         <button class="navbtn" data-page="stats" onclick="showPage('stats',this);loadStatsPage()">📈 Statisztikák</button>
         <button class="navbtn" data-page="upload" onclick="showPage('upload',this)">➕ Feltöltés</button>
@@ -318,6 +352,7 @@ body{
 
       <div id="mobileMenu" class="mobile-menu">
         <button class="mobile-navbtn active" data-mobile-page="home" onclick="mobileNavigate('home')">🏠 Főoldal</button>
+        <button class="mobile-navbtn" data-mobile-page="challenges" onclick="mobileNavigate('challenges')">🎯 Challengek</button>
         <button class="mobile-navbtn" data-mobile-page="leader" onclick="mobileNavigate('leader')">🏆 Ranglisták</button>
         <button class="mobile-navbtn" data-mobile-page="stats" onclick="mobileNavigate('stats')">📈 Statisztikák</button>
         <button class="mobile-navbtn" data-mobile-page="upload" onclick="mobileNavigate('upload')">➕ Feltöltés</button>
@@ -365,12 +400,32 @@ body{
               </div>
             </div></div>
             <div class="panel section"><div class="panel-pad">
+              <div class="panel-title"><h3>🎯 Challengek</h3><span class="muted">napi + heti</span></div>
+              <div id="homeChallenges" class="challenge-list challenge-home"><div class="muted">Betöltés...</div></div>
+              <button class="btn secondary full" style="margin-top:12px" onclick="showPage('challenges',document.querySelector('[data-page=challenges]'));loadChallenges()">Részletek ›</button>
+            </div></div>
+            <div class="panel section"><div class="panel-pad">
               <div class="panel-title"><h3>🗓️ Heti ranglista</h3><span class="muted" id="homeWeekLabel"></span></div>
               <div id="homeWeek"></div>
               <button class="btn secondary full" style="margin-top:12px" onclick="openLeaderPage('week')">Összes heti ranglista ›</button>
             </div></div>
           </div>
         </div>
+      </section>
+
+      <section id="page-challenges" class="hidden">
+        <div class="panel"><div class="panel-pad">
+          <div class="panel-title">
+            <div>
+              <h2 style="margin-bottom:4px">🎯 Napi és heti challengek</h2>
+              <div class="muted">A feladatok automatikusan váltanak. A teljesítés és a bónuszpont szerveroldalon kerül jóváírásra.</div>
+            </div>
+          </div>
+          <div id="challengeList" class="challenge-list" style="margin-top:16px">
+            <div class="muted">Challengek betöltése...</div>
+          </div>
+          <div class="muted" style="margin-top:12px">A napi challenge minden nap, a heti challenge hétfőnként cserélődik (Budapest időzóna).</div>
+        </div></div>
       </section>
 
       <section id="page-leader" class="hidden">
@@ -631,6 +686,7 @@ let editingDrink=null;
 let statsCache={drinks:[],profiles:[]};
 let croppedAvatarBlob=null,cropObjectUrl=null;
 let nativeDrinkPhotoFile=null;
+let activeChallenges=[];
 const crop={img:null,minScale:1,scale:1,x:0,y:0,drag:false,lastX:0,lastY:0};
 const $=id=>document.getElementById(id);
 const configured=!SUPABASE_URL.startsWith('IDE_')&&!SUPABASE_ANON_KEY.startsWith('IDE_');
@@ -823,6 +879,7 @@ function mobileNavigate(page){
   showPage(page,desktopBtn);
   document.querySelectorAll('[data-mobile-page]').forEach(x=>x.classList.toggle('active',x.dataset.mobilePage===page));
   if(page==='stats')loadStatsPage();
+  if(page==='challenges')loadChallenges();
   toggleMobileMenu(false);
 }
 
@@ -931,6 +988,9 @@ async function start(sessionOverride){
 
     await withTimeout(loadProfile(),10000,'Profil betöltése');
     await withTimeout(loadCategories(),10000,'Kategóriák betöltése');
+    await withTimeout(loadChallenges(),10000,'Challengek betöltése');
+    // A challenge RPC ezen a ponton automatikusan jóváírhat új bónuszt.
+    await withTimeout(loadProfile(),10000,'Profil frissítése');
     await withTimeout(Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]),15000,'Főoldal betöltése');
     await withTimeout(refreshStatsIfVisible(),10000,'Statisztikák betöltése');
 
@@ -971,8 +1031,8 @@ async function loadProfile(){
   const {data,error}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
   if(error)throw error;
   currentProfile=data;
-  $('navAvatar').src=avatarUrl(data.avatar_url);$('navName').textContent=data.display_name||'Játékos';$('navPoints').textContent=`${data.points||0} pont · ${data.drink_count||0} ital`;
-  $('profileAvatar').src=avatarUrl(data.avatar_url);$('profileName').value=data.display_name||'';$('profileScore').textContent=`${data.points||0} összpont · ${data.drink_count||0} feltöltött ital`;
+  $('navAvatar').src=avatarUrl(data.avatar_url);$('navName').textContent=data.display_name||'Játékos';$('navPoints').textContent=`${data.points||0} pont · ${data.drink_count||0} ital · 🎯 ${data.challenge_count||0}`;
+  $('profileAvatar').src=avatarUrl(data.avatar_url);$('profileName').value=data.display_name||'';$('profileScore').textContent=`${data.points||0} összpont · ${data.drink_count||0} feltöltött ital · 🎯 ${data.challenge_count||0} teljesített challenge`;
 }
 
 function getQuantityOptions(cat){
@@ -1034,6 +1094,48 @@ async function loadCategories(){
   renderQuantitySelector();
 }
 
+
+function challengePeriodName(type){return type==='daily'?'Napi challenge':'Heti challenge'}
+function challengeCardHtml(c,compact=false){
+  const target=Math.max(1,Number(c.target_count)||1);
+  const progress=Math.min(target,Math.max(0,Number(c.progress)||0));
+  const pct=Math.round(progress/target*100);
+  const completed=!!c.completed;
+  return `<div class="challenge-card ${completed?'completed':''}">
+    <div class="challenge-top">
+      <div>
+        <div class="challenge-type">${challengePeriodName(c.period_type)}</div>
+        <div class="challenge-title">${esc(c.title)}</div>
+      </div>
+      <div class="challenge-reward">+${Number(c.reward_points)||0} pont</div>
+    </div>
+    ${compact?'':`<div class="muted" style="margin-top:6px">${esc(c.description)}</div>`}
+    <div class="challenge-progress"><span style="width:${pct}%"></span></div>
+    <div class="challenge-foot">
+      <span>${progress} / ${target}</span>
+      <span class="${completed?'challenge-done':''}">${completed?'✓ Teljesítve':'Folyamatban'}</span>
+    </div>
+  </div>`;
+}
+async function loadChallenges(){
+  if(!sb||!currentUser)return;
+  const home=$('homeChallenges'),full=$('challengeList');
+  try{
+    const {data,error}=await sb.rpc('get_my_active_challenges');
+    if(error)throw error;
+    activeChallenges=data||[];
+    const fullHtml=activeChallenges.map(c=>challengeCardHtml(c,false)).join('')||'<div class="muted">Nincs aktív challenge.</div>';
+    const homeHtml=activeChallenges.map(c=>challengeCardHtml(c,true)).join('')||'<div class="muted">Nincs aktív challenge.</div>';
+    if(home)home.innerHTML=homeHtml;
+    if(full)full.innerHTML=fullHtml;
+  }catch(e){
+    console.error('Challenge betöltési hiba:',e);
+    const msg=`<div class="msg error">${esc(e.message||String(e))}</div>`;
+    if(home)home.innerHTML=msg;
+    if(full)full.innerHTML=msg;
+  }
+}
+
 function periodBounds(period,ref){
   if(period==='all')return {start:null,end:null,label:'Összesített ranglista'};
   const d=new Date(ref);d.setHours(0,0,0,0);let start,end,label;
@@ -1044,12 +1146,48 @@ function periodBounds(period,ref){
 }
 async function fetchLeaderboard(period='all',ref=new Date()){
   const bounds=periodBounds(period,ref);
-  let q=sb.from('drinks').select('user_id,points,created_at,profiles(display_name,avatar_url,drink_count)');
+  let q=sb.from('drinks').select('user_id,points,created_at,profiles(display_name,avatar_url,drink_count,challenge_count)');
   if(bounds.start)q=q.gte('created_at',bounds.start).lt('created_at',bounds.end);
   const {data,error}=await q;if(error)throw error;
+
   const map=new Map();
-  (data||[]).forEach(d=>{const p=map.get(d.user_id)||{id:d.user_id,name:d.profiles?.display_name||'Névtelen',avatar:d.profiles?.avatar_url||null,points:0,drinkCount:d.profiles?.drink_count||0};p.points+=Number(d.points)||0;map.set(d.user_id,p)});
-  if(period==='all'){const {data:profiles}=await sb.from('profiles').select('id,display_name,avatar_url,points,drink_count');(profiles||[]).forEach(p=>map.set(p.id,{id:p.id,name:p.display_name||'Névtelen',avatar:p.avatar_url,points:p.points||0,drinkCount:p.drink_count||0}))}
+  (data||[]).forEach(d=>{
+    const p=map.get(d.user_id)||{
+      id:d.user_id,
+      name:d.profiles?.display_name||'Névtelen',
+      avatar:d.profiles?.avatar_url||null,
+      points:0,
+      drinkCount:d.profiles?.drink_count||0,
+      challengeCount:d.profiles?.challenge_count||0
+    };
+    p.points+=Number(d.points)||0;
+    map.set(d.user_id,p);
+  });
+
+  if(period==='all'){
+    const {data:profiles,error:pe}=await sb.from('profiles').select('id,display_name,avatar_url,points,drink_count,challenge_count');
+    if(pe)throw pe;
+    (profiles||[]).forEach(p=>map.set(p.id,{
+      id:p.id,name:p.display_name||'Névtelen',avatar:p.avatar_url,
+      points:p.points||0,drinkCount:p.drink_count||0,challengeCount:p.challenge_count||0
+    }));
+  }else{
+    let cq=sb.from('challenge_completions')
+      .select('user_id,reward_points,completed_at,profiles(display_name,avatar_url,drink_count,challenge_count)')
+      .gte('completed_at',bounds.start).lt('completed_at',bounds.end);
+    const {data:bonuses,error:ce}=await cq;
+    if(ce)throw ce;
+    (bonuses||[]).forEach(c=>{
+      const p=map.get(c.user_id)||{
+        id:c.user_id,name:c.profiles?.display_name||'Névtelen',
+        avatar:c.profiles?.avatar_url||null,points:0,
+        drinkCount:c.profiles?.drink_count||0,challengeCount:c.profiles?.challenge_count||0
+      };
+      p.points+=Number(c.reward_points)||0;
+      map.set(c.user_id,p);
+    });
+  }
+
   return {rows:[...map.values()].sort((a,b)=>b.points-a.points||a.name.localeCompare(b.name,'hu')),label:bounds.label};
 }
 function rankRows(rows,limit=null){
@@ -1063,6 +1201,7 @@ function rankRows(rows,limit=null){
           <div>
             <span class="player-name">${esc(x.name)}</span>
             <div class="drink-count">🍻 ${x.drinkCount||0} ital</div>
+            <div class="challenge-count">🎯 ${x.challengeCount||0} challenge</div>
           </div>
         </div>
         <div class="points">${x.points} pont</div>
@@ -1133,7 +1272,7 @@ async function loadHome(){
     const {data}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(5);
     $('homeFeed').innerHTML=(data||[]).map(feedHtml).join('')||'<div class="muted">Még nincs feltöltött ital.</div>';
 
-    await loadHomeStats();
+    await Promise.all([loadHomeStats(),loadChallenges()]);
   }catch(e){console.error(e)}
 }
 async function setPeriod(period,btn){
@@ -1162,7 +1301,78 @@ async function loadLeaderboard(){
 function feedHtml(d){
   const adminControls=currentProfile?.is_admin?`<div class="drink-admin-actions"><button class="btn secondary small" onclick="openDrinkCategoryEditor(${d.id},event)">✏️ Kategória</button><button class="btn danger small" onclick="deleteDrink(${d.id},event)">🗑️ Törlés</button></div>`:'';
   const qty=d.quantity_label?` <span class="option-chip">${esc(d.quantity_label)}</span>`:'';
-  return `<div class="feed-card"><img class="feed-img" src="${d.photo_url}" onclick="openImage('${encodeURIComponent(d.photo_url)}')"><div><div class="feed-title">${esc(d.category_name||'Ital')}${qty}</div><div class="muted">${esc(d.drink_name)} · ${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</div>${adminControls}</div><div class="feed-points">+${d.points}<div class="muted">pont</div></div></div>`;
+  return `<div class="feed-wrap">
+    <div class="feed-card">
+      <img class="feed-img" src="${d.photo_url}" onclick="openImage('${encodeURIComponent(d.photo_url)}')">
+      <div>
+        <div class="feed-title">${esc(d.category_name||'Ital')}${qty}</div>
+        <div class="muted">${esc(d.drink_name)} · ${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</div>
+        <button class="comment-toggle" type="button" onclick="toggleComments(${d.id},event)">💬 Hozzászólások</button>
+        ${adminControls}
+      </div>
+      <div class="feed-points">+${d.points}<div class="muted">pont</div></div>
+    </div>
+    <div id="comments-${d.id}" class="comments-panel hidden">
+      <div id="commentList-${d.id}" class="comment-list"><div class="muted">Betöltés...</div></div>
+      <div class="comment-form">
+        <input id="commentInput-${d.id}" maxlength="500" placeholder="Írj hozzászólást…" onkeydown="if(event.key==='Enter'){event.preventDefault();addComment(${d.id})}">
+        <button class="btn small" type="button" onclick="addComment(${d.id})">Küldés</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function toggleComments(drinkId,event){
+  event?.stopPropagation();
+  const panel=$(`comments-${drinkId}`);
+  if(!panel)return;
+  const opening=panel.classList.contains('hidden');
+  panel.classList.toggle('hidden',!opening);
+  if(opening)await loadComments(drinkId);
+}
+async function loadComments(drinkId){
+  const list=$(`commentList-${drinkId}`);
+  if(!list)return;
+  list.innerHTML='<div class="muted">Betöltés...</div>';
+  const {data,error}=await sb.from('drink_comments')
+    .select('id,drink_id,user_id,body,created_at,profiles(display_name,avatar_url)')
+    .eq('drink_id',drinkId)
+    .order('created_at',{ascending:true});
+  if(error){
+    list.innerHTML=`<div class="msg error">${esc(error.message)}</div>`;
+    return;
+  }
+  list.innerHTML=(data||[]).map(c=>{
+    const canDelete=c.user_id===currentUser?.id||currentProfile?.is_admin;
+    return `<div class="comment-row">
+      <img class="comment-avatar" src="${avatarUrl(c.profiles?.avatar_url)}" alt="">
+      <div>
+        <b>${esc(c.profiles?.display_name||'Névtelen')}</b>
+        <div class="comment-body">${esc(c.body)}</div>
+        <div class="comment-meta">${new Date(c.created_at).toLocaleString('hu-HU')}</div>
+      </div>
+      ${canDelete?`<button class="btn danger small" type="button" onclick="deleteComment(${c.id},${drinkId})">🗑️</button>`:''}
+    </div>`;
+  }).join('')||'<div class="muted">Még nincs hozzászólás.</div>';
+}
+async function addComment(drinkId){
+  const input=$(`commentInput-${drinkId}`);
+  const body=input?.value.trim()||'';
+  if(!body)return;
+  if(body.length>500)return alert('A hozzászólás legfeljebb 500 karakter lehet.');
+  const {error}=await sb.from('drink_comments').insert({
+    drink_id:drinkId,
+    user_id:currentUser.id,
+    body
+  });
+  if(error)return alert(error.message);
+  input.value='';
+  await loadComments(drinkId);
+}
+async function deleteComment(commentId,drinkId){
+  if(!confirm('Törlöd ezt a hozzászólást?'))return;
+  const {error}=await sb.from('drink_comments').delete().eq('id',commentId);
+  if(error)return alert(error.message);
+  await loadComments(drinkId);
 }
 async function loadDrinks(){
   const {data,error}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(60);
@@ -1199,7 +1409,7 @@ async function uploadDrink(){
     $('drinkName').value='';if($('photo'))$('photo').value='';nativeDrinkPhotoFile=null;window.ItalPontNative?.clearDrinkPhoto();
     message('uploadMsg',`${opt.label} · +${opt.points} pont! A kép Cloudflare R2-re került.`);
     await loadProfile();
-    await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
+    await Promise.all([loadHome(),loadLeaderboard(),loadDrinks(),loadChallenges()]);await refreshStatsIfVisible();
   }catch(e){
     console.error(e);
     message('uploadMsg',e.message||String(e),true);
@@ -1478,7 +1688,7 @@ function renderSelectedPlayerStats(){
   $('playerStatsContent').innerHTML=`
     <div class="player-stat-summary">
       <b>${esc(profile.display_name||'Névtelen')}</b>
-      <div class="muted" style="margin-top:4px">🍻 ${drinks.length} ital · ${profile.points||0} pont</div>
+      <div class="muted" style="margin-top:4px">🍻 ${drinks.length} ital · 🎯 ${profile.challenge_count||0} challenge · ${profile.points||0} pont</div><div class="muted">Challenge bónusz: +${profile.challenge_points||0} pont</div>
       <div style="margin-top:7px"><b>Elfogyasztott mennyiség:</b> ${formatConsumedAmount(totalMl,drinks.length,unknown)}</div>
     </div>
     <div class="player-category-list">
@@ -1495,7 +1705,7 @@ async function loadLeaderboardStats(preferredUserId=null){
     $('overallStatsContent').innerHTML='<div class="stats-empty">Statisztika betöltése...</div>';
     const [{data:drinks,error:de},{data:profiles,error:pe}]=await Promise.all([
       sb.from('drinks').select('id,user_id,category_name,quantity_label,amount_ml,points,created_at'),
-      sb.from('profiles').select('id,display_name,points,drink_count,avatar_url')
+      sb.from('profiles').select('id,display_name,points,drink_count,challenge_count,challenge_points,avatar_url')
     ]);
     if(de)throw de;
     if(pe)throw pe;
@@ -1529,7 +1739,7 @@ async function loadRankPlayerDetails(details,userId){
 
   try{
     const [{data:profile,error:pe},{data:drinks,error:de}]=await Promise.all([
-      sb.from('profiles').select('id,display_name,points,drink_count,avatar_url').eq('id',userId).single(),
+      sb.from('profiles').select('id,display_name,points,drink_count,challenge_count,challenge_points,avatar_url').eq('id',userId).single(),
       sb.from('drinks').select('id,user_id,category_name,quantity_label,amount_ml,points,created_at').eq('user_id',userId)
     ]);
     if(pe)throw pe;
@@ -1543,7 +1753,7 @@ async function loadRankPlayerDetails(details,userId){
       <div class="inline-stat-head">
         <div>
           <b>${esc(profile?.display_name||'Névtelen')}</b>
-          <div class="muted">🍻 ${(drinks||[]).length} ital · ${profile?.points||0} pont</div>
+          <div class="muted">🍻 ${(drinks||[]).length} ital · 🎯 ${profile?.challenge_count||0} challenge · ${profile?.points||0} pont</div><div class="muted">Challenge bónusz: +${profile?.challenge_points||0} pont</div>
         </div>
         <div class="muted">${formatConsumedAmount(totalMl,(drinks||[]).length,unknown)}</div>
       </div>
@@ -1615,7 +1825,7 @@ function renderStandalonePlayerStats(){
   $('standalonePlayerStatsContent').innerHTML=`
     <div class="player-stat-summary">
       <b>${esc(profile.display_name||'Névtelen')}</b>
-      <div class="muted" style="margin-top:4px">🍻 ${drinks.length} ital · ${profile.points||0} pont</div>
+      <div class="muted" style="margin-top:4px">🍻 ${drinks.length} ital · 🎯 ${profile.challenge_count||0} challenge · ${profile.points||0} pont</div><div class="muted">Challenge bónusz: +${profile.challenge_points||0} pont</div>
       <div style="margin-top:7px"><b>Elfogyasztott mennyiség:</b> ${formatConsumedAmount(totalMl,drinks.length,unknown)}</div>
     </div>
     <div class="player-category-list">
@@ -1632,7 +1842,7 @@ async function loadStatsPage(){
     $('standaloneOverallStatsContent').innerHTML='<div class="stats-empty">Statisztika betöltése...</div>';
     const [{data:drinks,error:de},{data:profiles,error:pe}]=await Promise.all([
       sb.from('drinks').select('id,user_id,category_name,quantity_label,amount_ml,points,created_at'),
-      sb.from('profiles').select('id,display_name,points,drink_count,avatar_url')
+      sb.from('profiles').select('id,display_name,points,drink_count,challenge_count,challenge_points,avatar_url')
     ]);
     if(de)throw de;
     if(pe)throw pe;
@@ -1818,14 +2028,14 @@ async function saveAllCategories(){
   await Promise.all([loadHome(),loadLeaderboard(),loadDrinks(),loadAdminCategories()]);
 }
 async function loadAdminUsers(){
-  const {data,error}=await sb.from('profiles').select('id,display_name,is_admin,points,drink_count').order('display_name');
+  const {data,error}=await sb.from('profiles').select('id,display_name,is_admin,points,drink_count,challenge_count,challenge_points').order('display_name');
   if(error)return $('adminUsers').textContent=error.message;
 
   $('adminUsers').innerHTML=(data||[]).map(u=>`
     <div class="user-row">
       <div>
         <b>${esc(u.display_name||'Névtelen')}</b>
-        <div class="muted">${u.points||0} pont · 🍻 ${u.drink_count||0} ital</div>
+        <div class="muted">${u.points||0} pont · 🍻 ${u.drink_count||0} ital · 🎯 ${u.challenge_count||0} challenge (+${u.challenge_points||0})</div>
       </div>
       <select id="role-${u.id}" ${u.id===currentUser.id?'disabled':''}>
         <option value="false" ${!u.is_admin?'selected':''}>Játékos</option>
