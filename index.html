@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.5</title>
+<title>ItalPont V5.6</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b0d10">
-<meta name="italpont-version" content="5.5.0">
+<meta name="italpont-version" content="5.6.0">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -245,6 +245,26 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 .update-version{font-size:20px;font-weight:900;color:#fbbf24}
 .update-changelog{white-space:pre-wrap;background:#0f1115;border:1px solid #313640;border-radius:10px;padding:10px}
 .update-status{font-size:13px;color:#aeb4bf}
+.ai-recognition-card{
+  margin-top:12px;padding:13px;background:linear-gradient(135deg,#151225,#101319);
+  border:1px solid #514078;border-radius:13px
+}
+.ai-recognition-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ai-recognition-title{font-weight:900;font-size:15px}
+.ai-recognition-status{font-size:12px;color:#c4b5fd}
+.ai-recognition-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
+.ai-result-cell{padding:9px;background:#0e1014;border:1px solid #2e3340;border-radius:9px}
+.ai-result-cell span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8f96a3;font-weight:800}
+.ai-result-cell b{display:block;margin-top:2px;overflow-wrap:anywhere}
+.ai-confidence{display:flex;align-items:center;gap:8px;margin-top:10px}
+.ai-confidence-bar{height:7px;flex:1;background:#272b33;border-radius:999px;overflow:hidden}
+.ai-confidence-bar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#7c3aed,#fbbf24)}
+.ai-recognition-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.ai-note{margin-top:8px;font-size:12px;color:#aeb4bf}
+.ai-thinking{animation:aiPulse 1.2s ease-in-out infinite}
+@keyframes aiPulse{0%,100%{opacity:.55}50%{opacity:1}}
+@media(max-width:600px){.ai-recognition-grid{grid-template-columns:1fr}}
+
 .admin-release-card{margin-bottom:18px;padding:14px;border:1px solid #343a45;border-radius:13px;background:#101319}
 .release-list{display:grid;gap:8px;margin-top:12px}
 .release-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;background:#0d0f13;border:1px solid #2c323b;border-radius:10px}
@@ -324,7 +344,7 @@ body{
 <script src="./pwa.js"></script>
 </head>
 <body>
-<!-- V550_AUTOUPDATE_COMMENT_PUSH_CHALLENGES -->
+<!-- V560_AI_DRINK_RECOGNITION -->
 <div id="connectionBanner" class="connection-banner">
   <div id="connectionBannerText" class="text">Kapcsolódási probléma.</div>
   <button class="btn secondary small" type="button" onclick="retryAppLoad()">Újrapróbálás</button>
@@ -335,7 +355,7 @@ body{
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V5.5</h1>
+        <h1>🍺 ItalPont V5.6</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -524,6 +544,7 @@ body{
           <h2>➕ Ital feltöltése</h2>
           <div class="form-grid">
             <div><label>Ital neve</label><input id="drinkName" placeholder="pl. Soproni IPA"></div>
+            <div><label>Márka <span class="muted">(opcionális)</span></label><input id="drinkBrand" maxlength="120" placeholder="pl. Soproni"></div>
             <div>
               <label>Főkategória</label>
               <select id="category" onchange="renderQuantitySelector()"></select>
@@ -571,6 +592,15 @@ body{
                 </div>
               </div>
               <div class="muted" style="margin-top:7px">Androidon és iPhone-on külön választható a Kamera és a Galéria. Feltöltés előtt a képet max. 1600 px-re és WebP-re optimalizáljuk. Android újraindítás esetén a kameraképet is megpróbáljuk visszaállítani.</div>
+              <div id="aiRecognitionCard" class="ai-recognition-card hidden">
+                <div class="ai-recognition-head">
+                  <div class="ai-recognition-title">🤖 AI italfelismerés</div>
+                  <div id="aiRecognitionStatus" class="ai-recognition-status">Várakozás…</div>
+                </div>
+                <div id="aiRecognitionContent">
+                  <div class="muted" style="margin-top:8px">A kép kiválasztása után automatikusan megpróbáljuk felismerni az italt.</div>
+                </div>
+              </div>
             </div>
           </div>
           <button class="btn" style="margin-top:12px" onclick="uploadDrink()">Feltöltés és pont hozzáadása</button>
@@ -764,6 +794,10 @@ let webDrinkPhotoFile=null;
 let webDrinkPhotoPreviewUrl=null;
 let activeChallenges=[];
 let pendingAndroidUpdateRelease=null;
+let aiRecognitionResult=null;
+let aiRecognitionSerial=0;
+let aiRecognitionTimer=null;
+let aiRecognitionBusy=false;
 const crop={img:null,minScale:1,scale:1,x:0,y:0,drag:false,lastX:0,lastY:0};
 const $=id=>document.getElementById(id);
 const configured=!SUPABASE_URL.startsWith('IDE_')&&!SUPABASE_ANON_KEY.startsWith('IDE_');
@@ -841,6 +875,7 @@ window.ItalPontCanAutoReload=function(){
   return !nativeDrinkPhotoFile
     && !webDrinkPhotoFile
     && !($('drinkName')?.value||'').trim()
+    && !($('drinkBrand')?.value||'').trim()
     && !commentDirty;
 };
 
@@ -1013,8 +1048,165 @@ function consumeNotificationDeepLink(){
   }catch(_){}
 }
 
+
+function clearAiRecognition(hideCard=true){
+  aiRecognitionSerial++;
+  aiRecognitionResult=null;
+  aiRecognitionBusy=false;
+  if(aiRecognitionTimer){clearTimeout(aiRecognitionTimer);aiRecognitionTimer=null}
+  const card=$('aiRecognitionCard');
+  if(card && hideCard)card.classList.add('hidden');
+  if($('aiRecognitionStatus'))$('aiRecognitionStatus').textContent='Várakozás…';
+}
+
+function aiConfidenceLabel(value){
+  const n=Number(value)||0;
+  if(n>=85)return 'magas';
+  if(n>=60)return 'közepes';
+  return 'alacsony';
+}
+
+function renderAiRecognition(result){
+  const card=$('aiRecognitionCard'),content=$('aiRecognitionContent'),status=$('aiRecognitionStatus');
+  if(!card||!content||!status)return;
+  card.classList.remove('hidden');
+
+  if(!result?.recognized){
+    status.textContent='Nem biztos';
+    content.innerHTML=`
+      <div class="msg warn" style="margin-top:9px">Nem tudtam kellő bizonyossággal felismerni az italt.</div>
+      ${result?.note?`<div class="ai-note">${esc(result.note)}</div>`:''}
+      <div class="ai-recognition-actions">
+        <button class="btn secondary small" type="button" onclick="recognizeSelectedDrinkPhoto(true)">🔄 Újra felismerés</button>
+        <button class="btn secondary small" type="button" onclick="clearAiRecognition(true)">Elrejtés</button>
+      </div>`;
+    return;
+  }
+
+  const confidence=Number(result.confidence)||0;
+  const category=result.category_name||'—';
+  content.innerHTML=`
+    <div class="ai-recognition-grid">
+      <div class="ai-result-cell"><span>Ital</span><b>${esc(result.drink_name||'—')}</b></div>
+      <div class="ai-result-cell"><span>Márka</span><b>${esc(result.brand||'Nem azonosítható')}</b></div>
+      <div class="ai-result-cell"><span>Főkategória</span><b>${esc(category)}</b></div>
+      <div class="ai-result-cell"><span>Bizonyosság</span><b>${confidence}% · ${aiConfidenceLabel(confidence)}</b></div>
+    </div>
+    <div class="ai-confidence">
+      <div class="ai-confidence-bar"><span style="width:${Math.max(0,Math.min(100,confidence))}%"></span></div>
+    </div>
+    ${result.note?`<div class="ai-note">${esc(result.note)}</div>`:''}
+    <div class="ai-recognition-actions">
+      <button class="btn green small" type="button" onclick="acceptAiRecognition()">✓ Javaslat elfogadása</button>
+      <button class="btn secondary small" type="button" onclick="recognizeSelectedDrinkPhoto(true)">🔄 Újra</button>
+      <button class="btn secondary small" type="button" onclick="clearAiRecognition(true)">Elvetés</button>
+    </div>`;
+  status.textContent=`${confidence}%`;
+}
+
+function acceptAiRecognition(){
+  const r=aiRecognitionResult;
+  if(!r?.recognized)return;
+  if(r.drink_name)$('drinkName').value=r.drink_name;
+  if(r.brand)$('drinkBrand').value=r.brand;
+
+  if(r.category_id){
+    const option=[...$('category').options].find(o=>Number(o.value)===Number(r.category_id));
+    if(option){
+      $('category').value=String(r.category_id);
+      renderQuantitySelector();
+    }
+  }else if(r.category_name){
+    const normalized=String(r.category_name).trim().toLocaleLowerCase('hu-HU');
+    const option=[...$('category').options].find(o=>o.textContent.trim().toLocaleLowerCase('hu-HU')===normalized);
+    if(option){
+      $('category').value=option.value;
+      renderQuantitySelector();
+    }
+  }
+  const status=$('aiRecognitionStatus');
+  if(status)status.textContent='Elfogadva ✓';
+  message('uploadMsg','AI javaslat alkalmazva. A mennyiséget ellenőrizd kézzel.');
+}
+
+async function blobToDataUrl(blob){
+  return await new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||''));
+    reader.onerror=()=>reject(new Error('Az AI kép előkészítése sikertelen.'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function prepareImageForRecognition(file){
+  let blob=await compressImageFile(file,1024,.72);
+  if(blob.size>950*1024)blob=await compressImageFile(file,768,.62);
+  if(blob.size>1_350*1024)throw new Error('A kép túl nagy az AI felismeréshez.');
+  return await blobToDataUrl(blob);
+}
+
+function scheduleDrinkRecognition(file,delay=450){
+  clearAiRecognition(false);
+  if(!file||!sb||!currentUser)return;
+  const card=$('aiRecognitionCard'),status=$('aiRecognitionStatus'),content=$('aiRecognitionContent');
+  if(card)card.classList.remove('hidden');
+  if(status)status.textContent='Előkészítés…';
+  if(content)content.innerHTML='<div class="muted ai-thinking" style="margin-top:8px">🤖 A kép elemzése hamarosan indul…</div>';
+  aiRecognitionTimer=setTimeout(()=>recognizeSelectedDrinkPhoto(false),delay);
+}
+
+async function recognizeSelectedDrinkPhoto(manual=false){
+  const file=window.getSelectedDrinkPhoto?.();
+  if(!file||!sb||!currentUser)return;
+  if(aiRecognitionBusy && !manual)return;
+
+  const serial=++aiRecognitionSerial;
+  aiRecognitionBusy=true;
+  const card=$('aiRecognitionCard'),status=$('aiRecognitionStatus'),content=$('aiRecognitionContent');
+  if(card)card.classList.remove('hidden');
+  if(status)status.textContent='Felismerés…';
+  if(content)content.innerHTML='<div class="muted ai-thinking" style="margin-top:8px">🔎 Címke, márka és italtípus elemzése…</div>';
+
+  try{
+    const imageDataUrl=await prepareImageForRecognition(file);
+    if(serial!==aiRecognitionSerial)return;
+
+    const {data,error}=await sb.functions.invoke('recognize-drink',{
+      body:{image_data_url:imageDataUrl}
+    });
+
+    if(serial!==aiRecognitionSerial)return;
+
+    if(error){
+      let detail=error.message||'AI felismerési hiba.';
+      try{
+        const body=await error.context?.json?.();
+        detail=body?.error||detail;
+      }catch(_){}
+      throw new Error(detail);
+    }
+    if(data?.error)throw new Error(data.error);
+
+    aiRecognitionResult=data;
+    renderAiRecognition(data);
+  }catch(e){
+    console.error('AI italfelismerés:',e);
+    if(serial!==aiRecognitionSerial)return;
+    if(status)status.textContent='Hiba';
+    if(content)content.innerHTML=`
+      <div class="msg error" style="margin-top:9px">${esc(e.message||String(e))}</div>
+      <div class="ai-recognition-actions">
+        <button class="btn secondary small" type="button" onclick="recognizeSelectedDrinkPhoto(true)">Újrapróbálás</button>
+      </div>`;
+  }finally{
+    if(serial===aiRecognitionSerial)aiRecognitionBusy=false;
+  }
+}
+window.recognizeSelectedDrinkPhoto=recognizeSelectedDrinkPhoto;
+
 window.setNativeDrinkPhoto=function(file,previewUrl){
   nativeDrinkPhotoFile=file||null;
+  if(!file)clearAiRecognition(true);
   const box=$('nativePhotoPreview'),img=$('nativePhotoPreviewImg'),name=$('nativePhotoName'),meta=$('nativePhotoMeta');
   if(!box)return;
   if(!file){
@@ -1026,6 +1218,7 @@ window.setNativeDrinkPhoto=function(file,previewUrl){
   if(name)name.textContent=file.name||'ital-foto.jpg';
   if(meta)meta.textContent=`${(file.size/1024/1024).toFixed(2)} MB · ${file.type||'kép'}`;
   box.classList.add('show');
+  scheduleDrinkRecognition(file);
 };
 function setWebDrinkPhoto(file){
   if(webDrinkPhotoPreviewUrl){
@@ -1042,6 +1235,7 @@ function setWebDrinkPhoto(file){
     if(img)img.removeAttribute('src');
     if(name)name.textContent='Kép';
     if(meta)meta.textContent='';
+    clearAiRecognition(true);
     return;
   }
 
@@ -1054,6 +1248,7 @@ function setWebDrinkPhoto(file){
   // Web/PWA választásnál a natív előnézet ne maradjon aktív.
   nativeDrinkPhotoFile=null;
   window.ItalPontNative?.clearDrinkPhotoPreviewOnly?.();
+  scheduleDrinkRecognition(file);
 }
 function clearWebDrinkPhoto(){
   const gallery=$('photo'),camera=$('photoCamera');
@@ -1607,7 +1802,7 @@ function feedHtml(d){
       <img class="feed-img" src="${d.photo_url}" onclick="openImage('${encodeURIComponent(d.photo_url)}')">
       <div>
         <div class="feed-title">${esc(d.category_name||'Ital')}${qty}</div>
-        <div class="muted">${esc(d.drink_name)} · ${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</div>
+        <div class="muted">${d.brand?`<span class="option-chip">${esc(d.brand)}</span> `:''}${esc(d.drink_name)} · ${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</div>
         <button class="comment-toggle" type="button" onclick="toggleComments(${d.id},event)">💬 Hozzászólások</button>
         ${adminControls}
       </div>
@@ -1683,7 +1878,7 @@ async function loadDrinks(){
   $('allDrinks').innerHTML=(data||[]).map(d=>`<div class="item-card">${feedHtml(d)}</div>`).join('')||'<div class="muted">Nincs feltöltés.</div>';
 }
 async function uploadDrink(){
-  const name=$('drinkName').value.trim(),file=window.getSelectedDrinkPhoto(),catId=Number($('category').value);
+  const name=$('drinkName').value.trim(),brand=$('drinkBrand').value.trim(),file=window.getSelectedDrinkPhoto(),catId=Number($('category').value);
   const cat=selectedCategory(),opt=selectedQuantityOption();
   if(!name||!file||!catId||!cat||!opt)return message('uploadMsg','Adj meg italnevet, kategóriát, mennyiséget és fotót.',true);
 
@@ -1699,6 +1894,7 @@ async function uploadDrink(){
     const {error}=await sb.from('drinks').insert({
       user_id:currentUser.id,
       drink_name:name,
+      brand:brand||null,
       category_id:cat.id,
       quantity_key:opt.key,
       photo_url:uploaded.url,
@@ -1709,7 +1905,7 @@ async function uploadDrink(){
       throw error;
     }
 
-    $('drinkName').value='';clearWebDrinkPhoto();nativeDrinkPhotoFile=null;window.ItalPontNative?.clearDrinkPhoto();
+    $('drinkName').value='';$('drinkBrand').value='';clearWebDrinkPhoto();nativeDrinkPhotoFile=null;window.ItalPontNative?.clearDrinkPhoto();clearAiRecognition(true);
     message('uploadMsg',`${opt.label} · +${opt.points} pont! A kép Cloudflare R2-re került.`);
     await loadProfile();
     await Promise.all([loadHome(),loadLeaderboard(),loadDrinks(),loadChallenges()]);await refreshStatsIfVisible();
