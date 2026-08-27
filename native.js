@@ -1,5 +1,5 @@
 /**
- * ItalPont V5.5 native Android bridge.
+ * ItalPont V5.6.1 native Android bridge.
  * Kamera-stabilitás + Android appRestoredResult kezelés.
  * Weben biztonságosan no-op.
  */
@@ -402,7 +402,7 @@
         url:release.apk_url,
         fileName:`ItalPont-${release.version_name||release.version_code}.apk`
       });
-      window.setAndroidUpdateStatus?.('Az Android telepítő megnyílt. Hagyd jóvá a frissítést.');
+      window.setAndroidUpdateStatus?.('A rendszer telepítési folyamata elindult. Hagyd jóvá az Android ablakában.');
     }catch(e){
       console.error('Android frissítés hiba:',e);
       window.setAndroidUpdateStatus?.(e?.message||String(e),true);
@@ -435,6 +435,13 @@
     });
   }
 
+  async function openUpdateInBrowser(url){
+    if(!isNative()||!url)return;
+    const Updater=plugin('ItalPontUpdater');
+    if(!Updater?.openDownloadUrl)throw new Error('A böngészős frissítési tartalék nem érhető el.');
+    await Updater.openDownloadUrl({url});
+  }
+
   async function unregisterPush(){
     if(!isNative())return;
     const Push=plugin('PushNotifications');
@@ -455,7 +462,8 @@
     unregisterPush,
     flushPendingRestoredPhoto,
     checkForUpdates,
-    installAndroidUpdate
+    installAndroidUpdate,
+    openUpdateInBrowser
   };
 
   initRestoredResultListener().catch(e=>console.warn('App restored listener:',e));

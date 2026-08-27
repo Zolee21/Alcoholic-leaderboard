@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.6</title>
+<title>ItalPont V5.6.2</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b0d10">
-<meta name="italpont-version" content="5.6.0">
+<meta name="italpont-version" content="5.6.2">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -344,7 +344,7 @@ body{
 <script src="./pwa.js"></script>
 </head>
 <body>
-<!-- V560_AI_DRINK_RECOGNITION -->
+<!-- V562_AI_OUTPUT_VISUAL_REFRESH -->
 <div id="connectionBanner" class="connection-banner">
   <div id="connectionBannerText" class="text">Kapcsolódási probléma.</div>
   <button class="btn secondary small" type="button" onclick="retryAppLoad()">Újrapróbálás</button>
@@ -355,7 +355,7 @@ body{
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V5.6</h1>
+        <h1>🍺 ItalPont V5.6.2</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -727,6 +727,7 @@ body{
       <div id="androidUpdateStatus" class="update-status"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn green full" type="button" onclick="runAndroidUpdate()">🔄 Frissítés</button>
+        <button class="btn secondary full" type="button" onclick="openAndroidUpdateFallback()">🌐 APK megnyitása böngészőben</button>
         <button id="androidUpdateLaterBtn" class="btn secondary full" type="button" onclick="dismissAndroidUpdate()">Később</button>
       </div>
     </div>
@@ -914,6 +915,16 @@ window.setAndroidUpdateStatus=function(text,isError=false){
 async function runAndroidUpdate(){
   if(!pendingAndroidUpdateRelease)return;
   await window.ItalPontNative?.installAndroidUpdate?.(pendingAndroidUpdateRelease);
+}
+
+async function openAndroidUpdateFallback(){
+  if(!pendingAndroidUpdateRelease?.apk_url)return;
+  try{
+    await window.ItalPontNative?.openUpdateInBrowser?.(pendingAndroidUpdateRelease.apk_url);
+    window.setAndroidUpdateStatus?.('A böngésző megnyílt. Töltsd le az APK-t, majd nyisd meg a Letöltésekből.');
+  }catch(e){
+    window.setAndroidUpdateStatus?.(e?.message||String(e),true);
+  }
 }
 
 function dismissAndroidUpdate(){
