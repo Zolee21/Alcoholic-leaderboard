@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'italpont-v5.4.1-shell-1';
+const CACHE_VERSION = 'italpont-v5.5.0-shell-1';
 const SHELL = [
   './','./index.html','./platform.js','./native.js','./pwa.js','./manifest.webmanifest',
   './assets/kulturfarm-banner.jpg','./assets/app-icon.png',
@@ -13,9 +13,19 @@ self.addEventListener('activate',event=>{
     keys.filter(k=>k.startsWith('italpont-')&&k!==CACHE_VERSION).map(k=>caches.delete(k))
   )).then(()=>self.clients.claim()));
 });
+
+self.addEventListener('message',event=>{
+  if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
+});
 self.addEventListener('fetch',event=>{
   const req=event.request;if(req.method!=='GET')return;
   const url=new URL(req.url);if(url.origin!==self.location.origin)return;
+
+  // A verzióellenőrzés soha ne a cache-ből jöjjön.
+  if(url.pathname.endsWith('/version.json')){
+    event.respondWith(fetch(req,{cache:'no-store'}));
+    return;
+  }
   if(req.mode==='navigate'){
     event.respondWith(fetch(req).then(res=>{
       const copy=res.clone();caches.open(CACHE_VERSION).then(c=>c.put('./index.html',copy));return res;

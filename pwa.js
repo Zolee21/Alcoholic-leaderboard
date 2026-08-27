@@ -1,7 +1,11 @@
-/** ItalPont V5.2 PWA + standards-based Web Push */
+/** ItalPont V5.5 PWA + Web Push + automatikus frissítés */
 (() => {
   let deferredPrompt = null;
   let swRegistration = null;
+  let webUpdateChecking = false;
+  let lastWebUpdateCheck = 0;
+  let pendingWebVersion = null;
+  let controllerReloadArmed = false;
   const $ = id => document.getElementById(id);
   const isNative = () => !!window.ItalPontPlatform?.isNative;
   const isStandalone = () =>
@@ -78,6 +82,124 @@
       throw e;
     }
     return navigator.serviceWorker.ready;
+  }
+
+  function versionParts(value){
+    return String(value||'0').split('.').map(x=>Number.parseInt(x,10)||0);
+  }
+
+  function compareVersions(a,b){
+    const aa=versionParts(a),bb=versionParts(b);
+    for(let i=0;i<Math.max(aa.length,bb.length,3);i++){
+      const av=aa[i]||0,bv=bb[i]||0;
+      if(av>bv)return 1;
+      if(av<bv)return -1;
+    }
+    return 0;
+  }
+
+  function currentWebVersion(){
+    return document.querySelector('meta[name="italpont-version"]')?.content||'0.0.0';
+  }
+
+  function ensureUpdateBanner(){
+    let box=$('autoUpdateBanner');
+    if(box)return box;
+    box=document.createElement('div');
+    box.id='autoUpdateBanner';
+    box.className='pwa-install-banner';
+    box.innerHTML=`
+      <div class="pwa-install-title">🔄 ItalPont frissítés</div>
+      <div id="autoUpdateText" class="muted" style="margin-top:4px">Új verzió érhető el.</div>
+      <div class="pwa-install-actions">
+        <button class="btn small" type="button" onclick="ItalPontPWA.applyPendingUpdate()">Frissítés most</button>
+      </div>`;
+    document.body.appendChild(box);
+    return box;
+  }
+
+  function canAutoReload(){
+    try{
+      return window.ItalPontCanAutoReload?.()!==false;
+    }catch(_){
+      return true;
+    }
+  }
+
+  function reloadForUpdate(){
+    if(!pendingWebVersion)return;
+    if(!canAutoReload()){
+      const box=ensureUpdateBanner();
+      const text=$('autoUpdateText');
+      if(text)text.textContent=`V${pendingWebVersion} készen áll. Amint nincs folyamatban szerkesztés/feltöltés, automatikusan frissítünk.`;
+      box.classList.add('show');
+      setTimeout(reloadForUpdate,5000);
+      return;
+    }
+    sessionStorage.setItem('italpont_last_applied_web_version',pendingWebVersion);
+    window.location.reload();
+  }
+
+  async function applyPendingUpdate(){
+    if(!pendingWebVersion)return;
+    // A kézi gomb szándékosan felülírja a "biztonságos újratöltés" várakozását.
+    sessionStorage.setItem('italpont_last_applied_web_version',pendingWebVersion);
+    window.location.reload();
+  }
+
+  async function activateWaitingWorker(reg){
+    if(reg?.waiting){
+      try{reg.waiting.postMessage({type:'SKIP_WAITING'})}catch(_){}
+    }
+  }
+
+  async function checkForWebUpdate(force=false){
+    if(isNative()||webUpdateChecking||!navigator.onLine)return;
+    const now=Date.now();
+    if(!force && now-lastWebUpdateCheck<60000)return;
+    lastWebUpdateCheck=now;
+    webUpdateChecking=true;
+
+    try{
+      const versionUrl=new URL('./version.json',window.location.href);
+      versionUrl.searchParams.set('_',String(Date.now()));
+      const res=await fetch(versionUrl.href,{cache:'no-store'});
+      if(!res.ok)return;
+      const remote=await res.json();
+      const remoteVersion=String(remote?.version||'');
+      const localVersion=currentWebVersion();
+      if(!remoteVersion || compareVersions(remoteVersion,localVersion)<=0)return;
+
+      pendingWebVersion=remoteVersion;
+      const reg=await ensureServiceWorker();
+
+      if(!controllerReloadArmed){
+        controllerReloadArmed=true;
+        navigator.serviceWorker.addEventListener('controllerchange',()=>{
+          reloadForUpdate();
+        });
+      }
+
+      await reg.update();
+      await activateWaitingWorker(reg);
+
+      if(reg.installing){
+        reg.installing.addEventListener('statechange',()=>{
+          if(reg.installing?.state==='installed')activateWaitingWorker(reg);
+        });
+      }
+
+      // Ha a worker már korábban aktiválódott, az újratöltés így sem marad el.
+      setTimeout(()=>{
+        if(pendingWebVersion && compareVersions(pendingWebVersion,currentWebVersion())>0){
+          reloadForUpdate();
+        }
+      },3500);
+    }catch(e){
+      console.warn('Automatikus webfrissítés ellenőrzési hiba:',e);
+    }finally{
+      webUpdateChecking=false;
+    }
   }
 
   function setWebPushStatus(text,state='warn',enabled=false){
@@ -214,11 +336,18 @@
     if(!isNative()){
       try{await ensureServiceWorker()}catch(_){}
       setTimeout(showInstallUI,900);
+      setTimeout(()=>checkForWebUpdate(true),1400);
+      setInterval(()=>checkForWebUpdate(false),10*60*1000);
     }else setTimeout(showInstallUI,500);
+  });
+
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)setTimeout(()=>checkForWebUpdate(false),250);
   });
 
   window.ItalPontPWA={
     install,dismiss,isIOS,isStandalone,showInstallUI,
-    initPush,enablePush,disablePush,unregisterPush
+    initPush,enablePush,disablePush,unregisterPush,
+    checkForWebUpdate,applyPendingUpdate
   };
 })();

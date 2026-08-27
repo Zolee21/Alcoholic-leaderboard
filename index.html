@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.4.1</title>
+<title>ItalPont V5.5</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b0d10">
+<meta name="italpont-version" content="5.5.0">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -240,6 +241,16 @@ input:focus,select:focus{border-color:#7862b9;box-shadow:0 0 0 3px #7862b933}
 .web-photo-preview img{width:54px;height:54px;object-fit:cover;border-radius:8px;border:1px solid #3a404a}
 .web-photo-preview .filemeta{min-width:0;flex:1}
 .web-photo-preview .filemeta b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.update-box{display:grid;gap:10px}
+.update-version{font-size:20px;font-weight:900;color:#fbbf24}
+.update-changelog{white-space:pre-wrap;background:#0f1115;border:1px solid #313640;border-radius:10px;padding:10px}
+.update-status{font-size:13px;color:#aeb4bf}
+.admin-release-card{margin-bottom:18px;padding:14px;border:1px solid #343a45;border-radius:13px;background:#101319}
+.release-list{display:grid;gap:8px;margin-top:12px}
+.release-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;background:#0d0f13;border:1px solid #2c323b;border-radius:10px}
+.release-badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#30234d;color:#d8c7ff;font-size:11px;font-weight:900}
+@media(max-width:760px){.release-row{grid-template-columns:1fr}}
+
 @media(max-width:520px){.web-photo-actions{grid-template-columns:1fr}}
 
 html.native-app .native-only{display:block!important}
@@ -313,7 +324,7 @@ body{
 <script src="./pwa.js"></script>
 </head>
 <body>
-<!-- V541_IPHONE_GALLERY_FIX -->
+<!-- V550_AUTOUPDATE_COMMENT_PUSH_CHALLENGES -->
 <div id="connectionBanner" class="connection-banner">
   <div id="connectionBannerText" class="text">Kapcsolódási probléma.</div>
   <button class="btn secondary small" type="button" onclick="retryAppLoad()">Újrapróbálás</button>
@@ -324,7 +335,7 @@ body{
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V5.4.1</h1>
+        <h1>🍺 ItalPont V5.5</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -592,7 +603,7 @@ body{
                   <div>
                     <b>🔔 Push értesítések</b>
                     <div id="pushStatus" class="push-status warn" style="margin-top:4px">Állapot ellenőrzése...</div>
-                    <div class="muted" style="margin-top:3px">Új ital és új játékos regisztráció esetén.</div>
+                    <div class="muted" style="margin-top:3px">Új ital, új játékos és a saját feltöltésedhez érkező hozzászólás esetén.</div>
                   </div>
                   <button class="btn secondary" type="button" onclick="ItalPontNative.enablePush()">Értesítések bekapcsolása</button>
                 </div>
@@ -603,7 +614,7 @@ body{
                   <div>
                     <b>🍎 iPhone / PWA push</b>
                     <div id="webPushStatus" class="push-status warn" style="margin-top:4px">Állapot ellenőrzése...</div>
-                    <div id="webPushHint" class="muted" style="margin-top:3px">Új ital és új játékos regisztráció esetén.</div>
+                    <div id="webPushHint" class="muted" style="margin-top:3px">Új ital, új játékos és a saját feltöltésedhez érkező hozzászólás esetén.</div>
                   </div>
                   <div style="display:flex;gap:7px;flex-wrap:wrap">
                     <button id="webPushEnableBtn" class="btn secondary" type="button" onclick="ItalPontPWA.enablePush()">Értesítések bekapcsolása</button>
@@ -619,6 +630,21 @@ body{
       <section id="page-admin" class="hidden">
         <div class="panel"><div class="panel-pad">
           <h2>🛠️ Admin</h2>
+          <div class="admin-release-card">
+            <h3 style="margin-top:0">📦 Android frissítés közzététele</h3>
+            <div class="muted">V5.5-től az Android app automatikusan ellenőrzi a legfrissebb kiadást. Az APK letöltése automatikus, az Android a telepítéshez kérhet jóváhagyást.</div>
+            <div class="form-grid" style="margin-top:12px">
+              <div><label>Verzió</label><input id="releaseVersionName" placeholder="pl. 5.6.0" oninput="syncReleaseVersionCode()"></div>
+              <div><label>Version code</label><input id="releaseVersionCode" type="number" min="1" step="1" placeholder="pl. 50600"></div>
+              <div style="grid-column:1/-1"><label>Változások</label><textarea id="releaseChangelog" rows="3" placeholder="Mi változott?"></textarea></div>
+              <div style="grid-column:1/-1"><label>APK fájl</label><input id="releaseApkFile" type="file" accept=".apk,application/vnd.android.package-archive"></div>
+              <label style="display:flex;align-items:center;gap:8px"><input id="releaseRequired" type="checkbox"> Kötelező frissítés</label>
+            </div>
+            <button class="btn green" style="margin-top:10px" onclick="publishAndroidRelease()">⬆️ Frissítés közzététele</button>
+            <div id="releaseMsg" class="msg hidden"></div>
+            <div id="adminReleases" class="release-list"></div>
+          </div>
+
           <div class="admin-grid">
             <div>
               <h3>Kategóriák</h3>
@@ -658,6 +684,23 @@ body{
     <button class="btn secondary small" onclick="ItalPontPWA.dismiss()">Most nem</button>
   </div>
   <div id="pwaInstallHelp" class="pwa-install-help hidden"></div>
+</div>
+
+<div id="androidUpdateModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="update-box">
+      <div>
+        <div class="muted">Új Android verzió érhető el</div>
+        <div id="androidUpdateVersion" class="update-version">ItalPont</div>
+      </div>
+      <div id="androidUpdateChangelog" class="update-changelog"></div>
+      <div id="androidUpdateStatus" class="update-status"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn green full" type="button" onclick="runAndroidUpdate()">🔄 Frissítés</button>
+        <button id="androidUpdateLaterBtn" class="btn secondary full" type="button" onclick="dismissAndroidUpdate()">Később</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="imageModal" class="modal hidden" onclick="closeImageModal(event)">
@@ -720,6 +763,7 @@ let nativeDrinkPhotoFile=null;
 let webDrinkPhotoFile=null;
 let webDrinkPhotoPreviewUrl=null;
 let activeChallenges=[];
+let pendingAndroidUpdateRelease=null;
 const crop={img:null,minScale:1,scale:1,x:0,y:0,drag:false,lastX:0,lastY:0};
 const $=id=>document.getElementById(id);
 const configured=!SUPABASE_URL.startsWith('IDE_')&&!SUPABASE_ANON_KEY.startsWith('IDE_');
@@ -790,6 +834,184 @@ window.addEventListener('online',()=>{
   hideConnectionBanner();
   if(currentUser)setTimeout(()=>void retryAppLoad(),350);
 });
+
+
+window.ItalPontCanAutoReload=function(){
+  const commentDirty=[...document.querySelectorAll('.comment-form input')].some(i=>i.value.trim());
+  return !nativeDrinkPhotoFile
+    && !webDrinkPhotoFile
+    && !($('drinkName')?.value||'').trim()
+    && !commentDirty;
+};
+
+window.fetchLatestAndroidRelease=async function(){
+  if(!sb||!currentUser)return null;
+  const {data,error}=await sb.from('app_releases')
+    .select('id,version_name,version_code,apk_url,apk_path,changelog,required,created_at')
+    .eq('platform','android')
+    .eq('is_active',true)
+    .order('version_code',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+  if(error){
+    console.warn('Android release lekérési hiba:',error);
+    return null;
+  }
+  return data||null;
+};
+
+window.showAndroidUpdate=function(release,currentInfo={}){
+  pendingAndroidUpdateRelease=release;
+  $('androidUpdateVersion').textContent=`ItalPont ${release.version_name} · build ${release.version_code}`;
+  $('androidUpdateChangelog').textContent=release.changelog||'Új ItalPont verzió érhető el.';
+  $('androidUpdateStatus').textContent=`Telepített build: ${currentInfo.build||'?'}${release.required?' · Kötelező frissítés':''}`;
+  $('androidUpdateLaterBtn').classList.toggle('hidden',!!release.required);
+  show('androidUpdateModal');
+};
+
+window.setAndroidUpdateStatus=function(text,isError=false){
+  const el=$('androidUpdateStatus');
+  if(!el)return;
+  el.textContent=text||'';
+  el.style.color=isError?'#f87171':'#aeb4bf';
+};
+
+async function runAndroidUpdate(){
+  if(!pendingAndroidUpdateRelease)return;
+  await window.ItalPontNative?.installAndroidUpdate?.(pendingAndroidUpdateRelease);
+}
+
+function dismissAndroidUpdate(){
+  if(!pendingAndroidUpdateRelease||pendingAndroidUpdateRelease.required)return;
+  localStorage.setItem(`italpont_update_dismissed_${pendingAndroidUpdateRelease.version_code}`,String(Date.now()));
+  hide('androidUpdateModal');
+}
+
+function semverToVersionCode(value){
+  const p=String(value||'').trim().split('.').map(x=>Number.parseInt(x,10)||0);
+  return (p[0]||0)*10000+(p[1]||0)*100+(p[2]||0);
+}
+function syncReleaseVersionCode(){
+  const name=$('releaseVersionName')?.value.trim();
+  const code=semverToVersionCode(name);
+  if(code>0)$('releaseVersionCode').value=String(code);
+}
+
+async function loadAdminReleases(){
+  if(!currentProfile?.is_admin||!$('adminReleases'))return;
+  const {data,error}=await sb.from('app_releases')
+    .select('id,version_name,version_code,apk_path,apk_url,changelog,required,is_active,created_at')
+    .eq('platform','android')
+    .order('version_code',{ascending:false})
+    .limit(12);
+  if(error){
+    $('adminReleases').innerHTML=`<div class="msg error">${esc(error.message)}</div>`;
+    return;
+  }
+  $('adminReleases').innerHTML=(data||[]).map(r=>`
+    <div class="release-row">
+      <div>
+        <b>V${esc(r.version_name)} · ${r.version_code}</b>
+        ${r.required?'<span class="release-badge">KÖTELEZŐ</span>':''}
+        ${!r.is_active?'<span class="release-badge">INAKTÍV</span>':''}
+        <div class="muted">${new Date(r.created_at).toLocaleString('hu-HU')}</div>
+        <div class="muted">${esc(r.changelog||'')}</div>
+      </div>
+      <button class="btn danger small" onclick="deleteAndroidRelease(${r.id},'${encodeURIComponent(r.apk_path)}')">🗑️</button>
+    </div>`).join('')||'<div class="muted">Még nincs közzétett Android frissítés.</div>';
+}
+
+async function publishAndroidRelease(){
+  if(!currentProfile?.is_admin)return;
+  const versionName=$('releaseVersionName').value.trim();
+  const versionCode=Number.parseInt($('releaseVersionCode').value,10);
+  const changelog=$('releaseChangelog').value.trim();
+  const required=$('releaseRequired').checked;
+  const file=$('releaseApkFile').files?.[0];
+
+  if(!versionName||!Number.isInteger(versionCode)||versionCode<=0||!file){
+    return message('releaseMsg','Verzió, version code és APK fájl szükséges.',true);
+  }
+  if(!file.name.toLowerCase().endsWith('.apk')){
+    return message('releaseMsg','Csak .apk fájl tölthető fel.',true);
+  }
+
+  const path=`android/${versionCode}-${Date.now()}-${file.name.replace(/[^A-Za-z0-9._-]/g,'_')}`;
+  try{
+    message('releaseMsg','APK feltöltése Supabase Storage-ba...');
+    const {error:uploadError}=await sb.storage.from('app-updates').upload(path,file,{
+      cacheControl:'3600',
+      upsert:false,
+      contentType:'application/vnd.android.package-archive'
+    });
+    if(uploadError)throw uploadError;
+
+    const {data:urlData}=sb.storage.from('app-updates').getPublicUrl(path);
+    const apkUrl=urlData?.publicUrl;
+    if(!apkUrl)throw new Error('Nem sikerült publikus APK URL-t készíteni.');
+
+    const {error:insertError}=await sb.from('app_releases').insert({
+      platform:'android',
+      version_name:versionName,
+      version_code:versionCode,
+      apk_path:path,
+      apk_url:apkUrl,
+      changelog,
+      required,
+      is_active:true,
+      created_by:currentUser.id
+    });
+    if(insertError){
+      await sb.storage.from('app-updates').remove([path]);
+      throw insertError;
+    }
+
+    message('releaseMsg',`V${versionName} közzétéve. A V5.5+ Android kliensek automatikusan észlelni fogják.`);
+    $('releaseApkFile').value='';
+    $('releaseChangelog').value='';
+    $('releaseRequired').checked=false;
+    await loadAdminReleases();
+  }catch(e){
+    message('releaseMsg',e.message||String(e),true);
+  }
+}
+
+async function deleteAndroidRelease(id,encodedPath){
+  if(!currentProfile?.is_admin)return;
+  if(!confirm('Törlöd ezt az Android frissítést?'))return;
+  const path=decodeURIComponent(encodedPath||'');
+  const {error}=await sb.from('app_releases').delete().eq('id',id);
+  if(error)return alert(error.message);
+  if(path)await sb.storage.from('app-updates').remove([path]);
+  await loadAdminReleases();
+}
+
+async function openDrinkFromNotification(drinkId){
+  const id=Number.parseInt(String(drinkId),10);
+  if(!id)return;
+  showPage('upload',document.querySelector('[data-page="upload"]'));
+  await loadDrinks();
+  setTimeout(async()=>{
+    const panel=$(`comments-${id}`);
+    if(panel){
+      panel.classList.remove('hidden');
+      await loadComments(id);
+      panel.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  },150);
+}
+window.openDrinkFromNotification=openDrinkFromNotification;
+
+function consumeNotificationDeepLink(){
+  try{
+    const url=new URL(window.location.href);
+    const drinkId=url.searchParams.get('drink');
+    if(!drinkId)return;
+    setTimeout(()=>openDrinkFromNotification(drinkId),250);
+    url.searchParams.delete('drink');
+    history.replaceState({},'',url.pathname+url.search+url.hash);
+  }catch(_){}
+}
 
 window.setNativeDrinkPhoto=function(file,previewUrl){
   nativeDrinkPhotoFile=file||null;
@@ -1091,6 +1313,8 @@ async function start(sessionOverride){
     // Ha Android a kamera közben újraindította az Activity-t, itt már biztosan
     // készen áll a feltöltési felület a visszaállított képhez.
     window.ItalPontNative?.flushPendingRestoredPhoto?.();
+    window.ItalPontNative?.checkForUpdates?.(true);
+    consumeNotificationDeepLink();
   })().catch(e=>{
     console.error('ItalPont indítási hiba:',e);
     showConnectionBanner(e.message||'Az ItalPont nem tudta betölteni az adatokat. Próbáld újra.');
@@ -1443,13 +1667,15 @@ async function addComment(drinkId){
   });
   if(error)return alert(error.message);
   input.value='';
-  await loadComments(drinkId);
+  await Promise.all([loadComments(drinkId),loadChallenges(),loadProfile()]);
+  await Promise.all([loadHome(),loadLeaderboard()]);
 }
 async function deleteComment(commentId,drinkId){
   if(!confirm('Törlöd ezt a hozzászólást?'))return;
   const {error}=await sb.from('drink_comments').delete().eq('id',commentId);
   if(error)return alert(error.message);
-  await loadComments(drinkId);
+  await Promise.all([loadComments(drinkId),loadChallenges(),loadProfile()]);
+  await Promise.all([loadHome(),loadLeaderboard()]);
 }
 async function loadDrinks(){
   const {data,error}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(60);
@@ -1950,7 +2176,7 @@ window.addEventListener('resize',()=>{
   },120);
 });
 
-async function loadAdmin(){await Promise.all([loadAdminCategories(),loadAdminUsers()])}
+async function loadAdmin(){await Promise.all([loadAdminCategories(),loadAdminUsers(),loadAdminReleases()])}
 async function loadAdminCategories(){
   const {data,error}=await sb.from('categories').select('*').order('sort_order',{ascending:true}).order('name');
   if(error)return message('adminMsg',error.message,true);

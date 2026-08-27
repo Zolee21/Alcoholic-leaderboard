@@ -1,5 +1,5 @@
 /**
- * ItalPont V5.3 native Android bridge.
+ * ItalPont V5.5 native Android bridge.
  * Kamera-stabilitás + Android appRestoredResult kezelés.
  * Weben biztonságosan no-op.
  */
@@ -10,9 +10,24 @@
   let cameraBusy = false;
   let restoredListenerInitialized = false;
   let pendingRestoredCameraResult = null;
+  let lastUpdateCheck = 0;
+  let updateCheckInFlight = false;
+  let pendingInstallRelease = null;
+  let appLifecycleInitialized = false;
 
   const isNative = () => !!window.ItalPontPlatform?.isNative;
-  const plugin = name => window.Capacitor?.Plugins?.[name] || null;
+  const pluginCache={};
+  const plugin = name => {
+    if(pluginCache[name])return pluginCache[name];
+    const legacy=window.Capacitor?.Plugins?.[name];
+    if(legacy)return (pluginCache[name]=legacy);
+    try{
+      if(typeof window.Capacitor?.registerPlugin==='function'){
+        return (pluginCache[name]=window.Capacitor.registerPlugin(name));
+      }
+    }catch(_){}
+    return null;
+  };
   const $ = id => document.getElementById(id);
 
   function setPushStatus(text, state='warn'){
@@ -242,6 +257,8 @@
       console.log('Push érkezett:',notification);
       if(notification?.data?.event_type==='new_drink'){
         window.loadHome?.();
+      }else if(notification?.data?.event_type==='new_comment'){
+        window.loadDrinks?.();
       }
     });
 
@@ -251,6 +268,13 @@
         const home=document.querySelector('[data-page="home"]');
         window.showPage?.('home',home);
         window.loadHome?.();
+      }else if(eventType==='new_comment'){
+        const drinkId=action?.notification?.data?.drink_id;
+        if(drinkId)window.openDrinkFromNotification?.(drinkId);
+        else{
+          const upload=document.querySelector('[data-page="upload"]');
+          window.showPage?.('upload',upload);
+        }
       }else{
         const home=document.querySelector('[data-page="home"]');
         window.showPage?.('home',home);
@@ -261,7 +285,7 @@
       await Push.createChannel({
         id:'italpont',
         name:'ItalPont értesítések',
-        description:'Új italok és új játékosok',
+        description:'Új italok, új játékosok és hozzászólások',
         importance:5,
         visibility:1,
         sound:'default',
@@ -325,6 +349,92 @@
     }
   }
 
+  async function checkForUpdates(force=false){
+    if(!isNative()||updateCheckInFlight)return;
+    const now=Date.now();
+    if(!force && now-lastUpdateCheck<5*60*1000)return;
+    lastUpdateCheck=now;
+    updateCheckInFlight=true;
+
+    try{
+      const App=plugin('App');
+      const info=await App?.getInfo?.();
+      const currentCode=Number.parseInt(info?.build||'0',10)||0;
+      const release=await window.fetchLatestAndroidRelease?.();
+      if(!release || Number(release.version_code)<=currentCode)return;
+
+      const dismissedKey=`italpont_update_dismissed_${release.version_code}`;
+      const dismissedAt=Number(localStorage.getItem(dismissedKey)||0);
+      if(!release.required && dismissedAt && Date.now()-dismissedAt<24*60*60*1000)return;
+
+      window.showAndroidUpdate?.(release,{
+        version:info?.version||'',
+        build:currentCode
+      });
+    }catch(e){
+      console.warn('Android frissítés ellenőrzési hiba:',e);
+    }finally{
+      updateCheckInFlight=false;
+    }
+  }
+
+  async function installAndroidUpdate(release){
+    if(!isNative()||!release?.apk_url)return;
+    const Updater=plugin('ItalPontUpdater');
+    if(!Updater){
+      window.setAndroidUpdateStatus?.('A frissítő natív modul nincs telepítve. Készíts új APK-t a V5.5 projektből.',true);
+      return;
+    }
+
+    try{
+      window.setAndroidUpdateStatus?.('Telepítési jogosultság ellenőrzése...');
+      const permission=await Updater.canInstall();
+      if(!permission?.allowed){
+        pendingInstallRelease=release;
+        window.setAndroidUpdateStatus?.('Engedélyezd az „Ismeretlen alkalmazások telepítése” jogosultságot. Visszatérés után automatikusan folytatjuk.');
+        await Updater.openInstallPermission();
+        return;
+      }
+
+      pendingInstallRelease=null;
+      window.setAndroidUpdateStatus?.('Frissítés letöltése…');
+      await Updater.downloadAndInstall({
+        url:release.apk_url,
+        fileName:`ItalPont-${release.version_name||release.version_code}.apk`
+      });
+      window.setAndroidUpdateStatus?.('Az Android telepítő megnyílt. Hagyd jóvá a frissítést.');
+    }catch(e){
+      console.error('Android frissítés hiba:',e);
+      window.setAndroidUpdateStatus?.(e?.message||String(e),true);
+    }
+  }
+
+  async function resumePendingInstall(){
+    if(!pendingInstallRelease)return;
+    const release=pendingInstallRelease;
+    const Updater=plugin('ItalPontUpdater');
+    if(!Updater)return;
+    try{
+      const permission=await Updater.canInstall();
+      if(permission?.allowed){
+        await installAndroidUpdate(release);
+      }
+    }catch(e){console.warn(e)}
+  }
+
+  async function initAppLifecycle(){
+    if(!isNative()||appLifecycleInitialized)return;
+    const App=plugin('App');
+    if(!App?.addListener)return;
+    appLifecycleInitialized=true;
+    await App.addListener('appStateChange',state=>{
+      if(state?.isActive){
+        resumePendingInstall();
+        checkForUpdates(false);
+      }
+    });
+  }
+
   async function unregisterPush(){
     if(!isNative())return;
     const Push=plugin('PushNotifications');
@@ -343,10 +453,13 @@
     initPush,
     enablePush,
     unregisterPush,
-    flushPendingRestoredPhoto
+    flushPendingRestoredPhoto,
+    checkForUpdates,
+    installAndroidUpdate
   };
 
   initRestoredResultListener().catch(e=>console.warn('App restored listener:',e));
+  initAppLifecycle().catch(e=>console.warn('App lifecycle listener:',e));
   window.addEventListener('load',()=>{
     flushPendingRestoredPhoto().catch(e=>console.warn(e));
     if(localStorage.getItem('italpont_camera_restore_pending')==='1')navigateToUploadWhenReady(true);
