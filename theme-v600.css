@@ -17,8 +17,8 @@
 .personal-hero-main{display:flex;align-items:center;gap:18px;min-width:0}
 .personal-hero h1{margin:3px 0 5px;font-size:30px}
 .personal-hero p{margin:0;color:#b4b8c1}
-.personal-metrics{display:grid;grid-template-columns:repeat(3,minmax(110px,1fr));gap:10px}
-.personal-metrics>div{min-width:112px;padding:12px 14px;border-radius:13px;background:#101218aa;border:1px solid #333743}
+.personal-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:min(420px,100%)}
+.personal-metrics>div{min-width:0;padding:12px 14px;border-radius:13px;background:#101218aa;border:1px solid #333743}
 .personal-metrics span{display:block;color:#9ca3af;font-size:12px;font-weight:800}
 .personal-metrics b{display:block;margin-top:3px;font-size:24px;color:#f7f7f8}
 .personal-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.75fr);gap:18px;align-items:start}
@@ -52,31 +52,49 @@
   .group-card{grid-template-columns:auto minmax(0,1fr)}.group-card-actions{grid-column:1/-1;justify-content:stretch}.group-card-actions .btn{flex:1}
 }
 
-/* V6.0.0 desktop grid hotfix — group context bar must not push main below sidebar */
+/* V6.0.2 — stabil desktop workspace layout.
+   A sidebar az első grid-oszlop, a teljes jobb oldal pedig EGYetlen grid-elem.
+   Így a context bar és a page soha nem kerülhet külön grid-sorba / a sidebar alá. */
+.app-workspace{min-width:0;width:100%}
 @media(min-width:901px){
   #app>.shell{
+    display:grid;
     grid-template-columns:244px minmax(0,1fr);
-    grid-template-rows:auto auto;
+    gap:24px;
+    align-items:start;
   }
   #app .navbar{
     grid-column:1;
-    grid-row:1 / span 2;
+    min-width:0;
+    width:244px;
+    align-self:start;
+  }
+  #app .app-workspace{
+    grid-column:2;
+    min-width:0;
+    width:100%;
+    max-width:100%;
+    overflow:visible;
   }
   #app .group-context-bar{
-    grid-column:2;
-    grid-row:1;
     width:100%;
     max-width:var(--content-max,1180px);
     margin:0 auto 14px;
     top:16px;
-    align-self:start;
   }
   #app .page{
-    grid-column:2;
-    grid-row:2;
     width:100%;
+    max-width:var(--content-max,1180px);
     min-width:0;
-    align-self:start;
+    margin:0 auto;
+    padding-top:0;
+  }
+  #app .page>section{
+    min-width:0;
+    width:100%;
+    max-width:100%;
   }
 }
-
+@media(max-width:900px){
+  #app .app-workspace{width:100%;min-width:0}
+}

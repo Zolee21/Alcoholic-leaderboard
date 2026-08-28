@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V6.0.1</title>
+<title>ItalPont V6.0.2</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="6.0.1">
+<meta name="italpont-version" content="6.0.2">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -371,7 +371,7 @@ body{
 </style>
 <link rel="stylesheet" href="./theme-v580.css">
 <link rel="stylesheet" href="./theme-v590.css">
-<link rel="stylesheet" href="./theme-v600.css">
+<link rel="stylesheet" href="./theme-v600.css?v=6.0.2">
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
 <script src="./pwa.js"></script>
@@ -480,6 +480,7 @@ window.ItalPontBootSplash={
       </div>
     </div>
 
+    <div class="app-workspace">
     <div id="groupContextBar" class="group-context-bar">
       <button class="group-context-personal" type="button" onclick="openPersonalHome()">👤 Saját adatok</button>
       <div class="group-context-select">
@@ -876,6 +877,7 @@ window.ItalPontBootSplash={
         </div></div>
       </section>
     </main>
+    </div>
   </div>
   <nav class="bottom-nav" aria-label="Mobil navigáció">
     <button class="active" data-bottom-page="home" onclick="mobileNavigate('home')"><span>⌂</span><small>Kezdőlap</small></button>

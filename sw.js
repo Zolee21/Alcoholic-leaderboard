@@ -1,6 +1,6 @@
-const CACHE_VERSION = 'italpont-v6.0.1-shell-2';
+const CACHE_VERSION = 'italpont-v6.0.2-shell-3';
 const SHELL = [
-  './','./index.html','./platform.js','./native.js','./pwa.js','./theme-v580.css','./theme-v590.css','./theme-v600.css','./manifest.webmanifest',
+  './','./index.html','./platform.js','./native.js','./pwa.js','./theme-v580.css','./theme-v590.css','./theme-v600.css?v=6.0.2','./manifest.webmanifest',
   './assets/kulturfarm-banner.jpg','./assets/app-icon.png',
   './assets/pwa/icon-192.png','./assets/pwa/icon-512.png','./assets/pwa/apple-touch-icon-180.png'
 ];
