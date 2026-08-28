@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.6.8</title>
+<title>ItalPont V5.8.0</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
-<meta name="theme-color" content="#0b0d10">
-<meta name="italpont-version" content="5.6.8">
+<meta name="theme-color" content="#121019">
+<meta name="italpont-version" content="5.8.0">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -368,17 +368,18 @@ body{
 @keyframes italpontBoot{from{transform:translateX(-25%)}to{transform:translateX(165%)}}
 
 </style>
+<link rel="stylesheet" href="./theme-v580.css">
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
 <script src="./pwa.js"></script>
 </head>
 <body>
-<!-- V568_CAMERA_RECOVERY_BRANDED_SPLASH -->
+<!-- V580_MIDNIGHT_PUB -->
 <div id="nativeBootSplash" class="native-boot-splash">
   <div class="native-boot-inner">
     <img class="native-boot-icon" src="assets/app-icon.png" alt="">
     <div class="native-boot-brand">Ital<span>Point</span></div>
-    <div class="native-boot-sub">G&G Kultúrfarm</div>
+    <div class="native-boot-sub">Töltsd fel. Gyűjts pontot. Nyerd a hetet.</div>
     <div id="nativeBootStatus" class="native-boot-status">Betöltés…</div>
     <div class="native-boot-loader"><span></span></div>
   </div>
@@ -416,8 +417,8 @@ window.ItalPontBootSplash={
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V5.6.8</h1>
-        <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
+        <h1>🍺 ItalPont</h1>
+        <p class="muted">A haveri esték pontozva.</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
           <div><label>Jelszó</label><input id="password" type="password" autocomplete="current-password"></div>
@@ -470,6 +471,29 @@ window.ItalPontBootSplash={
 
     <main class="page">
       <section id="page-home">
+        <div class="home-pub-hero">
+          <div class="home-pub-head">
+            <img id="homeHeroAvatar" class="avatar" alt="profil">
+            <div>
+              <div id="homeHeroGreeting" class="home-greeting">Szia! 👋</div>
+              <div class="home-tagline">Készen állsz az újabb pontokra?</div>
+            </div>
+          </div>
+          <div class="home-hero-stats">
+            <div class="home-hero-stat"><span>Összes pont</span><b id="homeHeroPoints">0</b><small id="homeHeroWeekPoints">+0 ezen a héten</small></div>
+            <div class="home-hero-stat"><span>Helyezés</span><b id="homeHeroRank">–</b><small>összesített</small></div>
+            <div class="home-hero-stat"><span>Feltöltések</span><b id="homeHeroDrinks">0</b><small id="homeHeroChallenges">0 challenge</small></div>
+          </div>
+          <div class="home-xp">
+            <div><div class="home-xp-track"><span id="homeHeroProgress"></span></div><div id="homeHeroProgressText" class="home-xp-label">Következő mérföldkő</div></div>
+            <div class="pill">🍻 ItalPont</div>
+          </div>
+          <div class="home-hero-actions">
+            <button class="btn" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">📷 Ital feltöltése</button>
+            <button class="btn secondary" onclick="showPage('challenges',document.querySelector('[data-page=challenges]'));loadChallenges()">🎯 Kihívások</button>
+            <button class="btn secondary" onclick="showPage('stats',document.querySelector('[data-page=stats]'));loadStatsPage()">📊 Statisztika</button>
+          </div>
+        </div>
         <div class="grid-home">
           <div class="leftcol">
             <div class="panel section"><div class="panel-pad">
@@ -603,12 +627,17 @@ window.ItalPontBootSplash={
       <section id="page-upload" class="hidden">
         <div class="panel"><div class="panel-pad">
           <h2>➕ Ital feltöltése</h2>
+          <div class="upload-steps">
+            <div class="upload-step active">Kép</div>
+            <div class="upload-step">AI felismerés</div>
+            <div class="upload-step">Kész</div>
+          </div>
           <div class="form-grid">
             <div><label>Ital neve</label><input id="drinkName" placeholder="pl. Soproni IPA"></div>
             <div><label>Márka <span class="muted">(opcionális)</span></label><input id="drinkBrand" maxlength="120" placeholder="pl. Soproni"></div>
             <div>
               <label>Főkategória</label>
-              <select id="category" onchange="renderQuantitySelector()"></select>
+              <select id="category" onchange="renderQuantitySelector();renderCategoryChips()"></select><div id="categoryChips" class="category-chips"></div>
               <div id="quantityBox" class="quantity-box hidden">
                 <div class="quantity-top">
                   <div><b>Mennyiség</b><div class="muted">Húzd a csúszkát a kívánt mennyiséghez.</div></div>
@@ -652,7 +681,7 @@ window.ItalPontBootSplash={
                   <button class="btn danger small" type="button" onclick="ItalPontNative.clearDrinkPhoto()">Eltávolítás</button>
                 </div>
               </div>
-              <div class="muted" style="margin-top:7px">Androidon és iPhone-on külön választható a Kamera és a Galéria. Androidon a Camera plugin natívan max. 1280 px-re és 74%-os JPEG minőségre optimalizálja a képet, majd változtatás nélkül töltjük fel; weben/PWA-n böngészőben optimalizáljuk. Android újraindítás esetén a kameraképet is megpróbáljuk visszaállítani.</div>
+              <div class="muted" style="margin-top:7px">Androidon és iPhone-on külön választható a Kamera és a Galéria. Feltöltés előtt minden platformon megpróbáljuk WebP-re optimalizálni a képet; ha a WebP nem lesz kisebb vagy Androidon hibás canvas keletkezne, automatikusan megtartjuk az eredeti képet. Android újraindítás esetén a kameraképet is megpróbáljuk visszaállítani.</div>
               <div id="aiRecognitionCard" class="ai-recognition-card hidden">
                 <div class="ai-recognition-head">
                   <div class="ai-recognition-title">🤖 AI italfelismerés</div>
@@ -680,6 +709,12 @@ window.ItalPontBootSplash={
               <img id="profileAvatar" class="avatar lg" alt="profilkép">
               <div style="margin-top:12px"><b id="profileScore"></b></div>
               <div id="roleBadge" class="badge hidden">ADMIN</div>
+              <div class="profile-metrics">
+                <div class="profile-metric"><b id="profileMetricDrinks">0</b><span>ital</span></div>
+                <div class="profile-metric"><b id="profileMetricPoints">0</b><span>pont</span></div>
+                <div class="profile-metric"><b id="profileMetricChallenges">0</b><span>challenge</span></div>
+              </div>
+              <div id="profileBadges" class="profile-badges"></div>
             </div>
             <div>
               <div class="form-grid">
@@ -764,6 +799,13 @@ window.ItalPontBootSplash={
       </section>
     </main>
   </div>
+  <nav class="bottom-nav" aria-label="Mobil navigáció">
+    <button class="active" data-bottom-page="home" onclick="mobileNavigate('home')"><span>⌂</span><small>Kezdőlap</small></button>
+    <button data-bottom-page="challenges" onclick="mobileNavigate('challenges')"><span>🏆</span><small>Kihívások</small></button>
+    <button class="bottom-add" data-bottom-page="upload" onclick="mobileNavigate('upload')"><span>＋</span><small>Feltöltés</small></button>
+    <button data-bottom-page="leader" onclick="mobileNavigate('leader')"><span>▥</span><small>Ranglista</small></button>
+    <button data-bottom-page="profile" onclick="mobileNavigate('profile')"><span>♙</span><small>Profil</small></button>
+  </nav>
 </div>
 
 
@@ -1481,32 +1523,56 @@ async function compressImageFile(file,maxDimension=1600,quality=.82,outputType='
   }
 }
 
-async function prepareImageForUpload(file){
-  // V5.6.6:
-  // Natív Androidon NEM nyúlunk többé canvas-szal a Camera plugin képéhez.
-  // A Camera plugin már 1440px / 80%-ra optimalizálta a képet.
-  // Ugyanaz a File kerül R2-re, amelyet az előnézetben látsz.
-  if(
-    window.ItalPontPlatform?.isNative===true && window.ItalPontPlatform?.isAndroid===true &&
-    nativeDrinkPhotoFile===file &&
-    file?.type?.startsWith('image/') &&
-    file.size>0
-  ){
-    return file;
+
+function imageMimeLabel(blob){
+  const type=String(blob?.type||'').toLowerCase();
+  if(type.includes('webp'))return 'WebP';
+  if(type.includes('jpeg'))return 'JPEG';
+  if(type.includes('png'))return 'PNG';
+  if(type.includes('heic'))return 'HEIC';
+  return type||'ismeretlen';
+}
+
+async function compressImageForUploadWebp(file,{maxDimension=1600,quality=.82}={}){
+  if(!file?.type?.startsWith('image/'))throw new Error('Csak képfájl tölthető fel.');
+
+  const attempts=[
+    {maxDimension,quality,outputType:'image/webp'},
+    {maxDimension:Math.min(maxDimension,1400),quality:Math.max(.74,quality-.08),outputType:'image/webp'},
+    {maxDimension:Math.min(maxDimension,1280),quality:Math.max(.70,quality-.12),outputType:'image/webp'}
+  ];
+
+  let bestBlob=null;
+  let lastError=null;
+  for(const attempt of attempts){
+    try{
+      const blob=await compressImageFile(file,attempt.maxDimension,attempt.quality,attempt.outputType);
+      if(blob?.size && (!bestBlob || blob.size<bestBlob.size))bestBlob=blob;
+    }catch(e){
+      if(String(e?.message||e)==='BLACK_CANVAS'){
+        // Android WebView/GPU hiba esetén soha ne töltsünk fel fekete képet.
+        return file;
+      }
+      lastError=e;
+    }
   }
 
-  // Web/PWA esetén marad a böngészős optimalizálás.
-  try{
-    return await compressImageFile(file,1600,.82,'image/webp');
-  }catch(e){
-    if(
-      String(e?.message||e)==='BLACK_CANVAS' &&
-      /^image\/jpe?g$/i.test(file?.type||'')
-    ){
-      return file;
-    }
-    throw e;
+  if(bestBlob?.size){
+    const minSavings=Math.max(20*1024,Math.round(file.size*0.02));
+    if(bestBlob.size <= file.size - minSavings)return bestBlob;
   }
+
+  if(lastError && !bestBlob)throw lastError;
+  return file;
+}
+
+async function prepareImageForUpload(file){
+  const native=window.ItalPontPlatform?.isNative===true;
+  const maxDimension=native?1440:1600;
+  return await compressImageForUploadWebp(file,{
+    maxDimension,
+    quality:native?0.80:0.82
+  });
 }
 
 async function r2SignUpload(kind,contentType){
@@ -1548,6 +1614,7 @@ function mobileNavigate(page){
   const desktopBtn=document.querySelector(`.navbtn[data-page="${page}"]`);
   showPage(page,desktopBtn);
   document.querySelectorAll('[data-mobile-page]').forEach(x=>x.classList.toggle('active',x.dataset.mobilePage===page));
+  document.querySelectorAll('[data-bottom-page]').forEach(x=>x.classList.toggle('active',x.dataset.bottomPage===page));
   if(page==='stats')loadStatsPage();
   if(page==='challenges')loadChallenges();
   toggleMobileMenu(false);
@@ -1555,6 +1622,7 @@ function mobileNavigate(page){
 
 function showPage(page,btn){
   document.querySelectorAll('main section[id^=page-]').forEach(x=>x.classList.add('hidden'));
+  document.querySelectorAll('[data-bottom-page]').forEach(x=>x.classList.toggle('active',x.dataset.bottomPage===page));
   show('page-'+page);
   document.querySelectorAll('.navbtn[data-page]').forEach(x=>x.classList.remove('active'));
   if(btn)btn.classList.add('active');
@@ -1724,7 +1792,22 @@ async function loadProfile(){
   if(error)throw error;
   currentProfile=data;
   $('navAvatar').src=avatarUrl(data.avatar_url);$('navName').textContent=data.display_name||'Játékos';$('navPoints').textContent=`${data.points||0} pont · ${data.drink_count||0} ital · 🎯 ${data.challenge_count||0}`;
-  $('profileAvatar').src=avatarUrl(data.avatar_url);$('profileName').value=data.display_name||'';$('profileScore').textContent=`${data.points||0} összpont · ${data.drink_count||0} feltöltött ital · 🎯 ${data.challenge_count||0} teljesített challenge`;
+  $('profileAvatar').src=avatarUrl(data.avatar_url);$('profileName').value=data.display_name||'';$('profileScore').textContent=`${data.points||0} összpont`;
+  if($('homeHeroAvatar'))$('homeHeroAvatar').src=avatarUrl(data.avatar_url);
+  if($('homeHeroGreeting'))$('homeHeroGreeting').textContent=`Szia, ${data.display_name||'Játékos'}! 👋`;
+  if($('homeHeroPoints'))$('homeHeroPoints').textContent=Number(data.points||0).toLocaleString('hu-HU');
+  if($('homeHeroDrinks'))$('homeHeroDrinks').textContent=Number(data.drink_count||0).toLocaleString('hu-HU');
+  if($('homeHeroChallenges'))$('homeHeroChallenges').textContent=`${data.challenge_count||0} challenge`;
+  if($('profileMetricDrinks'))$('profileMetricDrinks').textContent=data.drink_count||0;
+  if($('profileMetricPoints'))$('profileMetricPoints').textContent=Number(data.points||0).toLocaleString('hu-HU');
+  if($('profileMetricChallenges'))$('profileMetricChallenges').textContent=data.challenge_count||0;
+  const pts=Math.max(0,Number(data.points)||0),milestone=Math.ceil((pts+1)/500)*500,base=Math.max(0,milestone-500),pct=Math.max(4,Math.min(100,((pts-base)/(milestone-base))*100));
+  if($('homeHeroProgress'))$('homeHeroProgress').style.width=`${pct}%`;
+  if($('homeHeroProgressText'))$('homeHeroProgressText').textContent=`${pts.toLocaleString('hu-HU')} / ${milestone.toLocaleString('hu-HU')} pont a következő mérföldkőig`;
+  const badges=[
+    ['🍻 Első ital',(data.drink_count||0)>=1],['🔥 Törzsvendég',(data.drink_count||0)>=10],['🎯 Challenge vadász',(data.challenge_count||0)>=5],['⭐ Pontgyűjtő',(data.points||0)>=100]
+  ];
+  if($('profileBadges'))$('profileBadges').innerHTML=badges.map(([label,ok])=>`<span class="profile-badge ${ok?'':'locked'}">${label}</span>`).join('');
 }
 
 function getQuantityOptions(cat){
@@ -1758,6 +1841,30 @@ function selectedQuantityOption(){
   const idx=Math.max(0,Math.min(opts.length-1,Number($('quantitySlider').value)||0));
   return opts[idx]||opts[0]||null;
 }
+function categoryVisual(name){
+  const n=String(name||'').toLowerCase();
+  if(n.includes('sör'))return '🍺';
+  if(n.includes('rövid')||n.includes('shot'))return '🥃';
+  if(n.includes('bor'))return '🍷';
+  if(n.includes('koktél')||n.includes('cocktail'))return '🍹';
+  if(n.includes('fröccs'))return '🥂';
+  return '🍸';
+}
+function setCategoryChip(id){
+  const select=$('category');
+  if(!select)return;
+  select.value=String(id);
+  $('quantitySlider').value='0';
+  renderQuantitySelector();
+  renderCategoryChips();
+}
+function renderCategoryChips(){
+  const box=$('categoryChips');
+  if(!box)return;
+  const current=String($('category')?.value||'');
+  box.innerHTML=categories.map(c=>`<button type="button" class="category-chip ${String(c.id)===current?'active':''}" onclick="setCategoryChip(${Number(c.id)})">${categoryVisual(c.name)} ${esc(c.name)}</button>`).join('');
+}
+
 function renderQuantitySelector(){
   const cat=selectedCategory();
   if(!cat){hide('quantityBox');return}
@@ -1784,6 +1891,7 @@ async function loadCategories(){
   $('category').innerHTML=categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   $('quantitySlider').value='0';
   renderQuantitySelector();
+  renderCategoryChips();
 }
 
 
@@ -1960,6 +2068,10 @@ async function loadHome(){
     $('homeOverall').innerHTML=rankRows(all.rows,5);
     $('homeWeek').innerHTML=rankRows(week.rows,3);
     $('homeWeekLabel').textContent=week.label;
+    const overallIndex=all.rows.findIndex(r=>r.id===currentUser?.id);
+    if($('homeHeroRank'))$('homeHeroRank').textContent=overallIndex>=0?`#${overallIndex+1}`:'–';
+    const weekMe=week.rows.find(r=>r.id===currentUser?.id);
+    if($('homeHeroWeekPoints'))$('homeHeroWeekPoints').textContent=`+${Number(weekMe?.points||0).toLocaleString('hu-HU')} ezen a héten`;
 
     const {data}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(5);
     $('homeFeed').innerHTML=(data||[]).map(feedHtml).join('')||'<div class="muted">Még nincs feltöltött ital.</div>';
@@ -2098,12 +2210,13 @@ async function uploadDrink(){
     const compressed=await prepareImageForUpload(file);
     const before=(file.size/1024/1024).toFixed(2);
     const after=(compressed.size/1024/1024).toFixed(2);
-    const nativeAndroid=window.ItalPontPlatform?.isNative===true && window.ItalPontPlatform?.isAndroid===true;
+    const mimeLabel=imageMimeLabel(compressed);
+    const savedMb=Math.max(0,(file.size-compressed.size)/1024/1024).toFixed(2);
 
-    if(nativeAndroid){
-      message('uploadMsg',`Feltöltés Cloudflare R2-re… ${after} MB · natívan optimalizált JPEG`);
+    if(compressed===file){
+      message('uploadMsg',`Feltöltés Cloudflare R2-re… (${before} MB → ${after} MB) · eredeti ${mimeLabel}`);
     }else{
-      message('uploadMsg',`Feltöltés Cloudflare R2-re… (${before} MB → ${after} MB)`);
+      message('uploadMsg',`Feltöltés Cloudflare R2-re… (${before} MB → ${after} MB) · ${mimeLabel} · -${savedMb} MB`);
     }
     const uploaded=await uploadBlobToR2(compressed,'drink');
 

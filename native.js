@@ -1,5 +1,5 @@
 /**
- * ItalPont V5.6.6 native Android bridge.
+ * ItalPont V5.8.0 native Android bridge.
  * Kamera-stabilitás + Android appRestoredResult kezelés.
  * Weben biztonságosan no-op.
  */

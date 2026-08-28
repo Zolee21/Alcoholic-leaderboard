@@ -1,5 +1,5 @@
 /**
- * ItalPont shared Web + Android platform helper.
+ * ItalPont shared Web + Android + iPhone platform helper.
  * The application itself remains one shared HTML/CSS/JS codebase.
  */
 (() => {
@@ -13,6 +13,7 @@
     isNative,
     platform,
     isAndroid: platform === "android",
+    isIOS: platform === "ios",
     isWeb: platform === "web"
   };
 
