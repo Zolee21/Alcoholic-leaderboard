@@ -2,7 +2,7 @@
   "id": "./",
   "name": "ItalPont – G&G Kultúrfarm",
   "short_name": "ItalPont",
-  "description": "Modern pub hangulatú baráti italpont, AI felismerés, challenge-ek és ranglista.",
+  "description": "ItalPont V6 — személyes italelőzmények, privát csoportok, meghívó linkek, challenge-ek és ranglisták.",
   "lang": "hu",
   "start_url": "./",
   "scope": "./",

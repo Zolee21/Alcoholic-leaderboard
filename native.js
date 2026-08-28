@@ -416,23 +416,24 @@
           }
         }));
 
-        handles.push(await Push.addListener('pushNotificationActionPerformed',action=>{
+        handles.push(await Push.addListener('pushNotificationActionPerformed',async action=>{
           const eventType=action?.notification?.data?.event_type;
+          const groupId=action?.notification?.data?.group_id;
+          const drinkId=action?.notification?.data?.drink_id;
           if(eventType==='new_drink'){
-            const home=document.querySelector('[data-page="home"]');
-            window.showPage?.('home',home);
-            window.loadHome?.();
-          }else if(eventType==='new_comment'){
-            const drinkId=action?.notification?.data?.drink_id;
-            if(drinkId)window.openDrinkFromNotification?.(drinkId);
+            if(groupId&&window.selectGroup)await window.selectGroup(groupId);
             else{
-              const community=document.querySelector('[data-page="community"]');
-              window.showPage?.('community',community);
-              window.loadDrinks?.();
+              const home=document.querySelector('[data-page="home"]');
+              window.showPage?.('home',home);
+              window.loadHome?.();
             }
+          }else if(eventType==='new_comment'){
+            if(drinkId)await window.openDrinkFromNotification?.(drinkId,groupId||null);
+            else if(groupId&&window.selectGroup)await window.selectGroup(groupId);
+          }else if(groupId&&window.selectGroup){
+            await window.selectGroup(groupId);
           }else{
-            const home=document.querySelector('[data-page="home"]');
-            window.showPage?.('home',home);
+            window.openPersonalHome?.();
           }
         }));
 
