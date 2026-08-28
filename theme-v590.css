@@ -1,4 +1,4 @@
-/* ItalPont V5.9.1 — Compact Home / merged leaderboard */
+/* ItalPont V5.9.2 — Uniform Home / compact leaderboard */
 :root{--content-max:1180px;--soft:rgba(255,255,255,.045)}
 .brand{position:relative;display:grid!important;grid-template-columns:auto 1fr;column-gap:9px;row-gap:1px;align-items:center!important}
 .brand span:first-child{grid-row:1/3}.brand b{line-height:1.05}.brand-sub{grid-column:2;color:#777083;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
@@ -35,4 +35,41 @@
 @media(max-width:520px){
   .home-recent-row{grid-template-columns:44px minmax(0,1fr) auto;gap:8px;min-height:54px;padding:5px 0}.home-recent-img{width:44px;height:44px;border-radius:10px}.home-recent-title{font-size:12px}.home-recent-meta{font-size:9px}.home-rank-toolbar{align-items:flex-start;flex-direction:column}.home-rank-label{text-align:left}.home-rank-tabs{width:100%}.home-rank-tab{padding:7px 8px}
   .page-head{display:grid;grid-template-columns:1fr auto}.page-head p{grid-column:1/-1}.page-head>.btn{grid-column:2;grid-row:1/3;align-self:start}.home-primary-actions{display:block!important;max-width:none}.home-primary-actions .btn{width:100%}.upload-steps-wide .upload-step:before{width:28px!important;height:28px!important}.community-list .feed-card{grid-template-columns:64px 1fr}.community-list .feed-img{width:64px;height:64px}.profile-v590-hero .profile-metrics{gap:6px!important}
+}
+
+/* V5.9.2 — mobile home cards share one consistent content width */
+@media(max-width:900px){
+  #page-home{width:100%;}
+  #page-home>.home-pub-hero,
+  #page-home .home-command-grid,
+  #page-home .home-focus-card,
+  #page-home .home-recent-panel,
+  #page-home .home-rank-panel,
+  #page-home .home-command-side>.panel{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    align-self:stretch!important;
+  }
+  #page-home .home-command-grid{align-items:stretch!important;}
+  #page-home .home-command-main,
+  #page-home .home-command-side{width:100%!important;}
+}
+
+
+/* V5.9.5 — edge-to-edge phone layout + tappable recent drinks */
+.home-recent-row{cursor:pointer;transition:background .14s ease,transform .14s ease}
+.home-recent-row:hover{background:rgba(168,85,247,.055)}
+.home-recent-row:active{background:rgba(168,85,247,.10);transform:scale(.996)}
+.home-recent-row:focus-visible{outline:2px solid rgba(192,132,252,.72);outline-offset:2px;border-radius:10px}
+
+@media(max-width:760px){
+  #app>.shell{padding-left:0!important;padding-right:0!important;}
+  #app .navbar{padding-left:max(12px,env(safe-area-inset-left))!important;padding-right:max(12px,env(safe-area-inset-right))!important;}
+  #app .page{width:100%!important;max-width:none!important;padding-left:0!important;padding-right:0!important;}
+  #app .page>section{width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important;}
+  #app .page .panel{width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important;border-left-width:0!important;border-right-width:0!important;border-radius:0!important;}
+  #app .page-head{padding-left:12px!important;padding-right:12px!important;margin-left:0!important;margin-right:0!important;}
+  #app .community-feed-panel,#app .challenge-stage,#page-leader>.panel,#page-stats>.stats-grid,#page-admin>.panel{width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important;}
+  #app .community-list .feed-wrap{border-left-width:0;border-right-width:0;border-radius:0;}
 }

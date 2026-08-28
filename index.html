@@ -1,13 +1,14 @@
 <!DOCTYPE html>
+<!-- V49_SHARED_WEB_ANDROID -->
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.9.1</title>
+<title>ItalPont V5.9.5</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="5.9.1">
+<meta name="italpont-version" content="5.9.5">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -494,9 +495,6 @@ window.ItalPontBootSplash={
             <div><div class="home-xp-track"><span id="homeHeroProgress"></span></div><div id="homeHeroProgressText" class="home-xp-label">Következő mérföldkő</div></div>
             <div class="pill">🍻 ItalPont</div>
           </div>
-          <div class="home-hero-actions home-primary-actions">
-            <button class="btn" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">＋ Új ital</button>
-          </div>
         </div>
 
         <div class="home-command-grid">
@@ -911,7 +909,19 @@ let aiRecognitionBusy=false;
 const crop={img:null,minScale:1,scale:1,x:0,y:0,drag:false,lastX:0,lastY:0};
 const $=id=>document.getElementById(id);
 const configured=!SUPABASE_URL.startsWith('IDE_')&&!SUPABASE_ANON_KEY.startsWith('IDE_');
-if(configured)sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+if(configured && window.supabase?.createClient){
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+}else if(configured){
+  console.error('Supabase JS kliens nem töltődött be.');
+  setTimeout(()=>{
+    window.ItalPontBootSplash?.hide?.(0);
+    try{
+      show('publicAuth');
+      hide('app');
+      message('authMsg','A Supabase kliens nem töltődött be. Ellenőrizd az internetkapcsolatot, majd indítsd újra az alkalmazást.',true);
+    }catch(_){}
+  },0);
+}
 
 function show(id){$(id).classList.remove('hidden')} function hide(id){$(id).classList.add('hidden')}
 function message(id,text,err=false){$(id).textContent=text;$(id).className='msg '+(err?'error':'success')}
@@ -1164,7 +1174,7 @@ function consumeNotificationDeepLink(){
     if(!drinkId)return;
     setTimeout(()=>openDrinkFromNotification(drinkId),250);
     url.searchParams.delete('drink');
-    history.replaceState({},'',url.pathname+url.search+url.hash);
+    history.replaceState(history.state||{italpontPage:'home',italpontDepth:0},'',url.pathname+url.search+url.hash);
   }catch(_){}
 }
 
@@ -1615,6 +1625,28 @@ function toggleMobileMenu(force){
   toggle.setAttribute('aria-expanded',open?'true':'false');
   toggle.textContent=open?'✕ Bezárás':'☰ Menü';
 }
+const APP_PAGES=new Set(['home','community','upload','challenges','leader','stats','profile','admin']);
+
+function visibleAppPage(){
+  const visible=[...document.querySelectorAll('main section[id^=page-]')].find(x=>!x.classList.contains('hidden'));
+  return visible?.id?.replace(/^page-/,'')||'home';
+}
+
+function replaceAppHistory(page='home',depth=0){
+  try{
+    history.replaceState({...(history.state||{}),italpontPage:page,italpontDepth:Math.max(0,Number(depth)||0)},'',location.href);
+  }catch(e){console.warn('Navigation replaceState:',e)}
+}
+
+function pushAppHistory(page){
+  try{
+    const state=history.state||{};
+    const current=state.italpontPage||visibleAppPage();
+    if(current===page)return;
+    history.pushState({italpontPage:page,italpontDepth:(Number(state.italpontDepth)||0)+1},'',location.href);
+  }catch(e){console.warn('Navigation pushState:',e)}
+}
+
 function mobileNavigate(page){
   const desktopBtn=document.querySelector(`.navbtn[data-page="${page}"]`);
   showPage(page,desktopBtn);
@@ -1626,18 +1658,63 @@ function mobileNavigate(page){
   toggleMobileMenu(false);
 }
 
-function showPage(page,btn){
+function showPage(page,btn,options={}){
+  if(!APP_PAGES.has(page))return;
+  const historyMode=options.history||'push';
+  if(historyMode==='push')pushAppHistory(page);
+  else if(historyMode==='replace')replaceAppHistory(page,options.depth||0);
+
   document.querySelectorAll('main section[id^=page-]').forEach(x=>x.classList.add('hidden'));
   document.querySelectorAll('[data-bottom-page]').forEach(x=>x.classList.toggle('active',x.dataset.bottomPage===page));
   show('page-'+page);
   document.querySelectorAll('.navbtn[data-page]').forEach(x=>x.classList.remove('active'));
-  if(btn)btn.classList.add('active');
+  const activeBtn=btn||document.querySelector(`.navbtn[data-page="${page}"]`);
+  if(activeBtn)activeBtn.classList.add('active');
   document.querySelectorAll('[data-mobile-page]').forEach(x=>x.classList.toggle('active',x.dataset.mobilePage===page));
   if(page==='stats')loadStatsPage();
+  if(page==='challenges')loadChallenges();
   if(page==='community')loadDrinks();
   toggleMobileMenu(false);
-  window.scrollTo({top:document.querySelector('.navbar').offsetTop,behavior:'smooth'});
+  if(options.scroll!==false){
+    const top=document.querySelector('.navbar')?.offsetTop||0;
+    window.scrollTo({top,behavior:options.instant?'auto':'smooth'});
+  }
 }
+
+function closeOverlayForBack(){
+  const image=$('imageModal');
+  if(image&&!image.classList.contains('hidden')){hide('imageModal');return true}
+  const edit=$('drinkEditModal');
+  if(edit&&!edit.classList.contains('hidden')){closeDrinkCategoryEditor();return true}
+  const crop=$('cropModal');
+  if(crop&&!crop.classList.contains('hidden')){cancelCrop();return true}
+  const update=$('androidUpdateModal');
+  if(update&&!update.classList.contains('hidden')){
+    if(pendingAndroidUpdateRelease?.required)return true;
+    dismissAndroidUpdate();
+    return true;
+  }
+  return false;
+}
+
+window.ItalPontHandleBackNavigation=function(){
+  if(closeOverlayForBack())return true;
+  const state=history.state||{};
+  const depth=Number(state.italpontDepth)||0;
+  if(depth>0){
+    history.back();
+    return true;
+  }
+  return false;
+};
+
+window.addEventListener('popstate',event=>{
+  if(!currentUser||$('app')?.classList.contains('hidden'))return;
+  const page=event.state?.italpontPage||'home';
+  if(APP_PAGES.has(page)){
+    showPage(page,document.querySelector(`.navbtn[data-page="${page}"]`),{history:'none',scroll:false});
+  }
+});
 function openAllDrinks(){
   showPage('community',document.querySelector('[data-page=community]'));
   loadDrinks();
@@ -1741,6 +1818,7 @@ async function start(sessionOverride){
     currentUser=session.user;
     hide('publicAuth');
     show('app');
+    showPage('home',document.querySelector('.navbtn[data-page="home"]'),{history:'replace',depth:0,scroll:false,instant:true});
     $('leaderDate').value=localDateInputValue(selectedLeaderDate);
 
     await withTimeout(loadProfile(),10000,'Profil betöltése');
@@ -2056,15 +2134,36 @@ function homeFeedHtml(d){
   const category=esc(d.category_name||'Ital');
   const name=esc(d.drink_name||d.brand||d.category_name||'Ital');
   const who=esc(d.profiles?.display_name||'Névtelen');
-  return `<div class="home-recent-row">
-    <img class="home-recent-img" src="${feedImageUrl(d)}" onclick="openImage('${encodeURIComponent(d.photo_url||'')}')" onerror="this.onerror=null;this.src=IMAGE_FALLBACK_SVG" alt="">
+  const label=esc(`${d.drink_name||d.brand||d.category_name||'Ital'} – hozzászólás írása`);
+  return `<div class="home-recent-row" role="button" tabindex="0" title="Hozzászólás írása" aria-label="${label}" onclick="openHomeDrinkComments(${Number(d.id)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openHomeDrinkComments(${Number(d.id)})}">
+    <img class="home-recent-img" src="${feedImageUrl(d)}" onerror="this.onerror=null;this.src=IMAGE_FALLBACK_SVG" alt="">
     <div class="home-recent-main">
       <div class="home-recent-title">${name}</div>
       <div class="home-recent-meta">${category}${qty} · ${who} · ${compactHomeDate(d.created_at)}</div>
     </div>
-    <div class="home-recent-points">+${Number(d.points)||0}<small>pont</small></div>
+    <div class="home-recent-points">+${Number(d.points)||0}<small>pont · 💬</small></div>
   </div>`;
 }
+
+async function openHomeDrinkComments(drinkId){
+  const id=Number.parseInt(String(drinkId),10);
+  if(!id)return;
+  showPage('community',document.querySelector('[data-page="community"]'));
+  await loadDrinks();
+  const panel=$(`comments-${id}`);
+  if(!panel)return;
+  panel.classList.remove('hidden');
+  await loadComments(id);
+  requestAnimationFrame(()=>{
+    panel.scrollIntoView({behavior:'smooth',block:'center'});
+    setTimeout(()=>{
+      const input=$(`commentInput-${id}`);
+      input?.focus?.({preventScroll:true});
+      input?.select?.();
+    },280);
+  });
+}
+window.openHomeDrinkComments=openHomeDrinkComments;
 
 function buildConicGradient(rows){
   const total=rows.reduce((s,r)=>s+r.count,0);
@@ -2966,8 +3065,10 @@ Törlődik az Auth-fiókja, profilja, összes itala és a hozzájuk tartozó ké
   }
 }
 
+let initialAuthEventSeen=false;
 if(sb){
   sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='INITIAL_SESSION')initialAuthEventSeen=true;
     // FONTOS: Supabase API-hívást nem indítunk közvetlenül ebben a callbackben.
     // A Supabase dokumentáció szerint ez deadlockot okozhat.
     if(event==='SIGNED_OUT'){
@@ -3016,6 +3117,26 @@ if(sb){
       setTimeout(()=>{if(currentUser)void loadProfile()},0);
     }
   });
+
+  // Android/WebView hotfix: egyes készülékeken a Supabase INITIAL_SESSION eseménye
+  // induláskor késhet vagy elveszhet. Ilyenkor explicit getSession() fallback bootol.
+  setTimeout(()=>{
+    if(initialAuthEventSeen || appStartedUserId || appStartPromise)return;
+    console.warn('ItalPont startup fallback: explicit session check.');
+    void start();
+  },1200);
+}
+
+// Utolsó védőháló: natív Androidon ne maradhasson örökre a saját splash képernyő.
+if(window.ItalPontPlatform?.isNative){
+  setTimeout(()=>{
+    if(appStartPromise || appStartedUserId)return;
+    const splash=$('nativeBootSplash');
+    if(splash && !splash.classList.contains('hide')){
+      console.warn('ItalPont startup watchdog: splash kényszerített elrejtése.');
+      window.ItalPontBootSplash?.hide?.(0);
+    }
+  },12000);
 }
 
 setAuthMode('login');

@@ -1,12 +1,17 @@
 /**
- * ItalPont V5.8.0 native Android bridge.
+ * ItalPont V5.9.5 native Android bridge.
  * Kamera-stabilitás + Android appRestoredResult kezelés.
  * Weben biztonságosan no-op.
  */
 (() => {
   let selectedPreviewUrl = null;
   let currentPushToken = null;
+  let backButtonInitialized = false;
   let pushInitialized = false;
+  let pushInitPromise = null;
+  let pushRegisterInFlight = false;
+  let pushStartupTimer = null;
+  let pushListenerHandles = [];
   let cameraBusy = false;
   let restoredListenerInitialized = false;
   let pendingRestoredCameraResult = null;
@@ -374,121 +379,206 @@
     }
   }
 
-  async function ensurePushListeners(){
-    const Push=plugin('PushNotifications');
-    if(!Push || pushInitialized)return Push;
-    pushInitialized=true;
+  const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
-    await Push.addListener('registration',async token=>{
-      currentPushToken=token.value;
-      localStorage.setItem('italpont_push_token',token.value);
+  async function bindPushListeners(Push){
+    if(pushInitialized)return Push;
+    if(pushInitPromise)return pushInitPromise;
+
+    pushInitPromise=(async()=>{
+      const handles=[];
       try{
-        await window.savePushToken?.(token.value);
-        setPushStatus('Bekapcsolva ✓','ok');
-      }catch(e){
-        console.error('Push token mentési hiba:',e);
-        setPushStatus('Token mentési hiba','off');
-      }
-    });
+        handles.push(await Push.addListener('registration',async token=>{
+          if(!token?.value)return;
+          currentPushToken=token.value;
+          try{localStorage.setItem('italpont_push_token',token.value)}catch(_){}
+          try{
+            await window.savePushToken?.(token.value);
+            setPushStatus('Bekapcsolva ✓','ok');
+          }catch(e){
+            console.error('Push token mentési hiba:',e);
+            // A token ettől még natívan érvényes lehet, ezért ne állítsuk le az appot.
+            setPushStatus('Bekapcsolva · szinkronizálás később','warn');
+          }
+        }));
 
-    await Push.addListener('registrationError',err=>{
-      console.error('Push regisztrációs hiba:',err);
-      setPushStatus('Regisztrációs hiba','off');
-    });
+        handles.push(await Push.addListener('registrationError',err=>{
+          console.error('Push regisztrációs hiba:',err);
+          setPushStatus('Regisztrációs hiba','off');
+        }));
 
-    await Push.addListener('pushNotificationReceived',notification=>{
-      console.log('Push érkezett:',notification);
-      if(notification?.data?.event_type==='new_drink'){
-        window.loadHome?.();
-      }else if(notification?.data?.event_type==='new_comment'){
-        window.loadDrinks?.();
-      }
-    });
+        handles.push(await Push.addListener('pushNotificationReceived',notification=>{
+          console.log('Push érkezett:',notification);
+          if(notification?.data?.event_type==='new_drink'){
+            window.loadHome?.();
+          }else if(notification?.data?.event_type==='new_comment'){
+            window.loadDrinks?.();
+          }
+        }));
 
-    await Push.addListener('pushNotificationActionPerformed',action=>{
-      const eventType=action?.notification?.data?.event_type;
-      if(eventType==='new_drink'){
-        const home=document.querySelector('[data-page="home"]');
-        window.showPage?.('home',home);
-        window.loadHome?.();
-      }else if(eventType==='new_comment'){
-        const drinkId=action?.notification?.data?.drink_id;
-        if(drinkId)window.openDrinkFromNotification?.(drinkId);
-        else{
-          const community=document.querySelector('[data-page="community"]');
-          window.showPage?.('community',community);
-          window.loadDrinks?.();
+        handles.push(await Push.addListener('pushNotificationActionPerformed',action=>{
+          const eventType=action?.notification?.data?.event_type;
+          if(eventType==='new_drink'){
+            const home=document.querySelector('[data-page="home"]');
+            window.showPage?.('home',home);
+            window.loadHome?.();
+          }else if(eventType==='new_comment'){
+            const drinkId=action?.notification?.data?.drink_id;
+            if(drinkId)window.openDrinkFromNotification?.(drinkId);
+            else{
+              const community=document.querySelector('[data-page="community"]');
+              window.showPage?.('community',community);
+              window.loadDrinks?.();
+            }
+          }else{
+            const home=document.querySelector('[data-page="home"]');
+            window.showPage?.('home',home);
+          }
+        }));
+
+        try{
+          await Push.createChannel({
+            id:'italpont',
+            name:'ItalPont értesítések',
+            description:'Új italok, új játékosok és hozzászólások',
+            importance:5,
+            visibility:1,
+            sound:'default',
+            vibration:true
+          });
+        }catch(e){
+          console.warn('Notification channel:',e);
         }
-      }else{
-        const home=document.querySelector('[data-page="home"]');
-        window.showPage?.('home',home);
-      }
-    });
 
-    try{
-      await Push.createChannel({
-        id:'italpont',
-        name:'ItalPont értesítések',
-        description:'Új italok, új játékosok és hozzászólások',
-        importance:5,
-        visibility:1,
-        sound:'default',
-        vibration:true
-      });
-    }catch(e){
-      console.warn('Notification channel:',e);
-    }
-    return Push;
+        pushListenerHandles=handles;
+        pushInitialized=true;
+        return Push;
+      }catch(e){
+        // Ha egy listener bekötése félúton hibázik, ne maradjon hamisan "initialized" állapot.
+        pushInitialized=false;
+        for(const handle of handles){
+          try{await handle?.remove?.()}catch(_){}
+        }
+        throw e;
+      }finally{
+        pushInitPromise=null;
+      }
+    })();
+
+    return pushInitPromise;
   }
 
-  async function initPush(){
-    if(!isNative())return;
-    const Push=await ensurePushListeners();
-    if(!Push){
-      setPushStatus('Push plugin nincs telepítve','off');
-      return;
+  async function ensurePushListeners(retries=2){
+    const Push=plugin('PushNotifications');
+    if(!Push)return null;
+    let lastError=null;
+    for(let attempt=0;attempt<=retries;attempt++){
+      try{
+        return await bindPushListeners(Push);
+      }catch(e){
+        lastError=e;
+        console.warn(`Push listener inicializálás ${attempt+1}/${retries+1}:`,e);
+        if(attempt<retries)await sleep(450*(attempt+1));
+      }
+    }
+    throw lastError||new Error('Push listener inicializálási hiba.');
+  }
+
+  async function registerPushSafely(Push,{force=false}={}){
+    if(!Push || pushRegisterInFlight)return;
+
+    let storedToken=null;
+    try{storedToken=localStorage.getItem('italpont_push_token')}catch(_){}
+    if(storedToken){
+      currentPushToken=storedToken;
+      // A FCM regisztráció megmarad az alkalmazás telepítései között. Ne hívjuk
+      // Push.register()-t minden app-indításkor: bizonyos Android/WebView pároson
+      // ez induláskori Capacitor triggerEvent race-t okozott.
+      if(!force)return;
     }
 
+    pushRegisterInFlight=true;
     try{
-      let perm=await Push.checkPermissions();
-      if(perm.receive==='granted'){
-        setPushStatus('Bekapcsolva ✓','ok');
-        await Push.register();
+      // Engedélykérés / app-start után hagyjuk teljesen stabilizálódni a WebView-t.
+      await sleep(650);
+      await Push.register();
+    }finally{
+      pushRegisterInFlight=false;
+    }
+  }
+
+  async function initPushNow(){
+    if(!isNative())return;
+    try{
+      const Push=plugin('PushNotifications');
+      if(!Push){
+        setPushStatus('Push plugin nincs telepítve','off');
         return;
       }
 
-      const asked=localStorage.getItem('italpont_push_permission_asked')==='1';
-      if(!asked && (perm.receive==='prompt'||perm.receive==='prompt-with-rationale')){
-        localStorage.setItem('italpont_push_permission_asked','1');
-        perm=await Push.requestPermissions();
-        if(perm.receive==='granted'){
-          setPushStatus('Bekapcsolva ✓','ok');
-          await Push.register();
-          return;
-        }
+      const perm=await Push.checkPermissions();
+      if(perm.receive!=='granted'){
+        // V5.9.4: app-indításkor SOHA nem kérünk engedélyt automatikusan.
+        // Az engedélykérés kizárólag a profil "Bekapcsolás" gombjára történik.
+        setPushStatus('Nincs engedélyezve','off');
+        return;
       }
-      setPushStatus('Nincs engedélyezve','off');
+
+      setPushStatus('Bekapcsolva ✓','ok');
+
+      // Listener + token regisztráció nem része a kritikus boot útvonalnak.
+      // Ha bármi hibázik, az ItalPont ettől még használható marad.
+      await ensurePushListeners(2);
+      await registerPushSafely(Push,{force:false});
     }catch(e){
-      console.error('Push init hiba:',e);
-      setPushStatus('Push beállítási hiba','off');
+      console.error('Push háttér-inicializálási hiba:',e);
+      setPushStatus('Push átmenetileg nem elérhető','warn');
     }
+  }
+
+  function initPush(){
+    if(!isNative() || pushStartupTimer)return;
+
+    const schedule=()=>{
+      if(pushStartupTimer)return;
+      // A Supabase boot, a DOM és a Capacitor App plugin után induljon csak a push.
+      pushStartupTimer=setTimeout(()=>{
+        pushStartupTimer=null;
+        void initPushNow();
+      },1800);
+    };
+
+    if(document.readyState==='complete')schedule();
+    else window.addEventListener('load',schedule,{once:true});
   }
 
   async function enablePush(){
     if(!isNative())return;
-    const Push=await ensurePushListeners();
-    if(!Push)return setPushStatus('Push plugin nincs telepítve','off');
     try{
-      const perm=await Push.requestPermissions();
-      localStorage.setItem('italpont_push_permission_asked','1');
+      const Push=plugin('PushNotifications');
+      if(!Push)return setPushStatus('Push plugin nincs telepítve','off');
+
+      setPushStatus('Engedély ellenőrzése...','warn');
+      let perm=await Push.checkPermissions();
+      if(perm.receive!=='granted'){
+        perm=await Push.requestPermissions();
+      }
+      try{localStorage.setItem('italpont_push_permission_asked','1')}catch(_){}
+
       if(perm.receive!=='granted'){
         setPushStatus('Az értesítés nincs engedélyezve','off');
         return;
       }
+
+      // A permission dialog bezárása Activity/WebView state-change-et vált ki.
+      // Nem regisztrálunk ugyanabban a pillanatban, hanem megvárjuk a stabil állapotot.
+      setPushStatus('Push előkészítése...','warn');
+      await sleep(900);
+      await ensurePushListeners(3);
       setPushStatus('Regisztráció...','warn');
-      await Push.register();
+      await registerPushSafely(Push,{force:true});
     }catch(e){
-      console.error(e);
+      console.error('Push engedélyezési hiba:',e);
       setPushStatus('Push engedélyezési hiba','off');
     }
   }
@@ -566,6 +656,23 @@
     }catch(e){console.warn(e)}
   }
 
+  async function initBackButtonListener(){
+    if(!isNative()||backButtonInitialized)return;
+    const App=plugin('App');
+    if(!App?.addListener)return;
+    backButtonInitialized=true;
+    await App.addListener('backButton',async()=>{
+      try{
+        const handled=await window.ItalPontHandleBackNavigation?.();
+        if(handled)return;
+        if(App?.exitApp)await App.exitApp();
+      }catch(e){
+        console.warn('Android vissza gomb kezelési hiba:',e);
+        try{if(App?.exitApp)await App.exitApp()}catch(_){}
+      }
+    });
+  }
+
   async function initAppLifecycle(){
     if(!isNative()||appLifecycleInitialized)return;
     const App=plugin('App');
@@ -619,12 +726,22 @@
     openUpdateInBrowser
   };
 
-  initRestoredResultListener().catch(e=>console.warn('App restored listener:',e));
-  initAppLifecycle().catch(e=>console.warn('App lifecycle listener:',e));
+  // V5.9.3 Android startup hotfix:
+  // az App plugin lifecycle listenereit nem a <head> feldolgozása közben kötjük rá.
+  // Bizonyos Android WebView verzióknál ez túl korai Capacitor triggerEvent race-t okozhat.
+  function initNativeListenersSafely(){
+    if(!isNative())return;
+    setTimeout(()=>{
+      initRestoredResultListener().catch(e=>console.warn('App restored listener:',e));
+      initAppLifecycle().catch(e=>console.warn('App lifecycle listener:',e));
+      initBackButtonListener().catch(e=>console.warn('Android back listener:',e));
+    },250);
+  }
 
   // Process death után már a DOM felépülésekor jelezzük, hogy nem a főoldalra
   // akarunk visszatérni, hanem a kamerakép helyreállítása folyik.
   document.addEventListener('DOMContentLoaded',()=>{
+    initNativeListenersSafely();
     if(hasPendingCameraRecovery()){
       resumeCameraRecoveryUi();
     }
