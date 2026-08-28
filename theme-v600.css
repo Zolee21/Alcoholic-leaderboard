@@ -90,3 +90,17 @@
 @media(max-width:900px){
   #app .user-chip .nav-profile-shortcut{cursor:pointer}
 }
+
+
+/* V6.0.5 — új csoport létrehozása közvetlenül a Saját csoportjaim panelből */
+.group-list-heading{align-items:flex-start}
+.group-list-heading>.btn{flex:0 0 auto}
+.group-create-inline{margin:14px 0;padding:14px;border:1px solid #7258b4;border-radius:14px;background:#15111f;box-shadow:0 0 0 2px #7258b422}
+.group-create-inline-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.group-create-inline .icon-btn{width:34px;height:34px;padding:0;border-radius:10px}
+.group-empty .btn{justify-self:start;margin-top:7px}
+@media(max-width:600px){
+  .group-list-heading{display:grid;grid-template-columns:1fr;align-items:stretch}
+  .group-list-heading>.btn{width:100%}
+  .group-create-inline{margin-left:-16px;margin-right:-16px;border-left:0;border-right:0;border-radius:0;padding:16px}
+}

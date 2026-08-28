@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V6.0.4</title>
+<title>ItalPont V6.0.5</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="6.0.4">
+<meta name="italpont-version" content="6.0.5">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -371,7 +371,7 @@ body{
 </style>
 <link rel="stylesheet" href="./theme-v580.css">
 <link rel="stylesheet" href="./theme-v590.css">
-<link rel="stylesheet" href="./theme-v600.css?v=6.0.4">
+<link rel="stylesheet" href="./theme-v600.css?v=6.0.5">
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
 <script src="./pwa.js"></script>
@@ -502,7 +502,27 @@ window.ItalPontBootSplash={
         <div class="personal-grid">
           <div>
             <div class="panel section"><div class="panel-pad">
-              <div class="panel-title"><div><div class="eyebrow">CSOPORTOK</div><h3>👥 Saját csoportjaim</h3><div class="muted group-switch-hint">Csoportot ezen az oldalon tudsz váltani.</div></div></div>
+              <div class="panel-title group-list-heading">
+                <div><div class="eyebrow">CSOPORTOK</div><h3>👥 Saját csoportjaim</h3><div class="muted group-switch-hint">Csoportot ezen az oldalon tudsz váltani.</div></div>
+                <button id="newGroupToggleBtn" class="btn secondary small" type="button" onclick="toggleGroupCreateForm()">➕ Új csoport</button>
+              </div>
+              <div id="groupCreateInline" class="group-create-inline hidden">
+                <div class="group-create-inline-head"><b>➕ Új csoport létrehozása</b><button class="icon-btn" type="button" onclick="toggleGroupCreateForm(false)" aria-label="Bezárás">✕</button></div>
+                <label>Csoport neve</label>
+                <input id="newGroupName" maxlength="60" placeholder="pl. Péntek esti brigád">
+                <div class="group-start-options">
+                  <label class="group-start-option active">
+                    <input type="radio" name="groupStartMode" value="import" checked>
+                    <span><b>📥 Meglévő adatokkal</b><small>A csatlakozó tag korábbi italai is bekerülnek ebbe a csoportba.</small></span>
+                  </label>
+                  <label class="group-start-option">
+                    <input type="radio" name="groupStartMode" value="clean">
+                    <span><b>✨ Tiszta lappal</b><small>Csak a csoportban ezután feltöltött italok számítanak.</small></span>
+                  </label>
+                </div>
+                <button class="btn full" type="button" onclick="createNewGroup()">Csoport létrehozása</button>
+                <div id="createGroupMsg" class="msg hidden"></div>
+              </div>
               <div id="myGroups" class="group-card-list"><div class="muted">Csoportok betöltése…</div></div>
             </div></div>
 
@@ -513,24 +533,6 @@ window.ItalPontBootSplash={
           </div>
 
           <aside>
-            <div class="panel section"><div class="panel-pad">
-              <div class="eyebrow">ÚJ KÖR</div><h3>➕ Csoport létrehozása</h3>
-              <label>Csoport neve</label>
-              <input id="newGroupName" maxlength="60" placeholder="pl. Péntek esti brigád">
-              <div class="group-start-options">
-                <label class="group-start-option active">
-                  <input type="radio" name="groupStartMode" value="import" checked>
-                  <span><b>📥 Meglévő adatokkal</b><small>A csatlakozó tag korábbi italai is bekerülnek ebbe a csoportba.</small></span>
-                </label>
-                <label class="group-start-option">
-                  <input type="radio" name="groupStartMode" value="clean">
-                  <span><b>✨ Tiszta lappal</b><small>Csak a csoportban ezután feltöltött italok számítanak.</small></span>
-                </label>
-              </div>
-              <button class="btn full" type="button" onclick="createNewGroup()">Csoport létrehozása</button>
-              <div id="createGroupMsg" class="msg hidden"></div>
-            </div></div>
-
             <div class="panel section"><div class="panel-pad">
               <div class="eyebrow">MEGHÍVÁS</div><h3>🔗 Csatlakozás csoporthoz</h3>
               <p class="muted">Illeszd be a meghívó linket vagy a meghívókódot.</p>
@@ -1878,7 +1880,7 @@ async function loadGroups(){
       shouldRememberFallback=true;
     }
   }
-  // Első V6.0.4 indításnál még nincs mentett választás: az Exelenciásurak legyen a természetes alap,
+  // Első V6.0.5 indításnál még nincs mentett választás: az Exelenciásurak legyen a természetes alap,
   // egyébként az első elérhető csoport. Ezután már mindig a felhasználó saját utolsó választása nyer.
   if(!preferred)preferred=groups.find(g=>String(g.name||'').localeCompare('Exelenciásurak','hu',{sensitivity:'base'})===0)||groups[0]||null;
   if(preferred)setActiveGroup(preferred,{remember:shouldRememberFallback});
@@ -1889,7 +1891,7 @@ async function loadGroups(){
 }
 async function renderMyGroups(){
   const target=$('myGroups');if(!target)return;
-  if(!groups.length){target.innerHTML='<div class="group-empty"><b>Még nincs csoportod.</b><span>Hozz létre egyet, vagy csatlakozz meghívó linkkel.</span></div>';return;}
+  if(!groups.length){target.innerHTML='<div class="group-empty"><b>Még nincs csoportod.</b><span>Hozz létre egyet, vagy csatlakozz meghívó linkkel.</span><button class="btn small" type="button" onclick="toggleGroupCreateForm(true)">➕ Első csoport létrehozása</button></div>';return;}
   const counts=new Map();
   try{const ids=groups.map(g=>g.id);const {data}=await sb.from('group_members').select('group_id,user_id').in('group_id',ids);(data||[]).forEach(r=>counts.set(String(r.group_id),(counts.get(String(r.group_id))||0)+1));}catch(e){console.warn('Csoportlétszám:',e)}
   target.innerHTML=groups.map(g=>{
@@ -1937,10 +1939,18 @@ async function loadPersonalDashboard(){
     if(target)target.innerHTML=drinks.map(d=>`<div class="item-card">${feedHtml(d)}</div>`).join('')||'<div class="group-empty"><b>Még nincs feltöltött italod.</b><span>Nyiss meg egy csoportot, és töltsd fel az elsőt.</span></div>';await renderMyGroups();
   }catch(e){console.error(e);if(target)target.innerHTML=`<div class="msg error">${esc(e.message||String(e))}</div>`;}
 }
+function toggleGroupCreateForm(forceOpen){
+  const box=$('groupCreateInline');if(!box)return;
+  const shouldOpen=typeof forceOpen==='boolean'?forceOpen:box.classList.contains('hidden');
+  box.classList.toggle('hidden',!shouldOpen);
+  $('newGroupToggleBtn')?.setAttribute('aria-expanded',shouldOpen?'true':'false');
+  if(shouldOpen){setTimeout(()=>{$('newGroupName')?.focus();box.scrollIntoView({behavior:'smooth',block:'nearest'});},40);}
+}
+window.toggleGroupCreateForm=toggleGroupCreateForm;
 function selectedGroupImportMode(){return document.querySelector('input[name="groupStartMode"]:checked')?.value!=='clean';}
 async function createNewGroup(){
   const name=$('newGroupName')?.value.trim()||'';if(name.length<2)return message('createGroupMsg','Adj meg legalább 2 karakteres csoportnevet.',true);
-  try{message('createGroupMsg','Csoport létrehozása…');const {data,error}=await sb.rpc('create_group',{p_name:name,p_import_existing:selectedGroupImportMode()});if(error)throw error;$('newGroupName').value='';await loadGroups();message('createGroupMsg','Csoport létrehozva. Már küldheted is a meghívó linket.');if(data)await selectGroup(data);}catch(e){message('createGroupMsg',e.message||String(e),true);}
+  try{message('createGroupMsg','Csoport létrehozása…');const {data,error}=await sb.rpc('create_group',{p_name:name,p_import_existing:selectedGroupImportMode()});if(error)throw error;$('newGroupName').value='';await loadGroups();message('createGroupMsg','Csoport létrehozva.');toggleGroupCreateForm(false);if(data)await selectGroup(data);}catch(e){message('createGroupMsg',e.message||String(e),true);}
 }
 window.createNewGroup=createNewGroup;
 async function joinGroupByCode(code,fromDeepLink=false){
