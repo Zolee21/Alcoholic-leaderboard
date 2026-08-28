@@ -1,5 +1,5 @@
 /**
- * ItalPont V5.6.1 native Android bridge.
+ * ItalPont V5.6.5 native Android bridge.
  * Kamera-stabilitás + Android appRestoredResult kezelés.
  * Weben biztonságosan no-op.
  */
@@ -14,6 +14,11 @@
   let updateCheckInFlight = false;
   let pendingInstallRelease = null;
   let appLifecycleInitialized = false;
+  let cameraRecoveryTimeout = null;
+
+  const CAMERA_PENDING_KEY='italpont_camera_restore_pending';
+  const CAMERA_STARTED_KEY='italpont_camera_started_at';
+  const CAMERA_RESUME_PAGE_KEY='italpont_camera_resume_page';
 
   const isNative = () => !!window.ItalPontPlatform?.isNative;
   const pluginCache={};
@@ -38,24 +43,49 @@
   }
 
   async function resultToFile(result, fallbackName='italpont.jpg'){
-    let webPath=result?.webPath;
-    if(!webPath){
-      const nativePath=result?.uri||result?.path;
-      if(nativePath && window.Capacitor?.convertFileSrc)webPath=window.Capacitor.convertFileSrc(nativePath);
+    const candidates=[];
+    const add=value=>{
+      if(value && !candidates.includes(value))candidates.push(value);
+    };
+
+    add(result?.webPath);
+
+    for(const nativePath of [result?.uri,result?.path]){
+      if(!nativePath)continue;
+      try{
+        if(window.Capacitor?.convertFileSrc)add(window.Capacitor.convertFileSrc(nativePath));
+      }catch(_){}
+      add(nativePath);
     }
-    if(!webPath)throw new Error('A kiválasztott kép nem olvasható.');
-    const response=await fetch(webPath);
-    if(!response.ok)throw new Error('A kép beolvasása sikertelen.');
-    const blob=await response.blob();
-    const format=(result?.metadata?.format||blob.type?.split('/')[1]||'jpg').replace('jpeg','jpg');
-    const safeName=fallbackName.replace(/\.[^.]+$/,'')||'italpont';
-    return new File([blob],`${safeName}-${Date.now()}.${format}`,{type:blob.type||`image/${format==='jpg'?'jpeg':format}`});
+
+    if(!candidates.length)throw new Error('A kiválasztott képhez nem érkezett olvasható fájlútvonal.');
+
+    let lastError=null;
+    for(const mediaPath of candidates){
+      try{
+        const response=await fetch(mediaPath,{cache:'no-store'});
+        if(!response.ok)throw new Error(`Kép beolvasási HTTP hiba: ${response.status}`);
+        const blob=await response.blob();
+        if(!blob?.size)throw new Error('A kamerakép üres.');
+        const format=(result?.format||result?.metadata?.format||blob.type?.split('/')[1]||'jpg').replace('jpeg','jpg');
+        const safeName=fallbackName.replace(/\.[^.]+$/,'')||'italpont';
+        return new File(
+          [blob],
+          `${safeName}-${Date.now()}.${format}`,
+          {type:blob.type||`image/${format==='jpg'?'jpeg':format}`}
+        );
+      }catch(e){
+        lastError=e;
+      }
+    }
+
+    throw lastError||new Error('A kép beolvasása sikertelen.');
   }
 
-  function setNativePhoto(file,webPath){
+  function setNativePhoto(file,webPath,source='native'){
     if(selectedPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(selectedPreviewUrl);
     selectedPreviewUrl=webPath||URL.createObjectURL(file);
-    window.setNativeDrinkPhoto?.(file,selectedPreviewUrl);
+    window.setNativeDrinkPhoto?.(file,selectedPreviewUrl,source);
   }
 
   function clearDrinkPhotoPreviewOnly(){
@@ -66,7 +96,7 @@
   function clearDrinkPhoto(){
     if(selectedPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(selectedPreviewUrl);
     selectedPreviewUrl=null;
-    window.setNativeDrinkPhoto?.(null,null);
+    window.setNativeDrinkPhoto?.(null,null,null);
   }
 
   function setCameraBusy(busy){
@@ -77,7 +107,47 @@
     if(galleryBtn)galleryBtn.disabled=cameraBusy;
   }
 
-  function navigateToUploadWhenReady(restored=false){
+  function markCameraPending(){
+    try{
+      localStorage.setItem(CAMERA_PENDING_KEY,'1');
+      localStorage.setItem(CAMERA_STARTED_KEY,String(Date.now()));
+      localStorage.setItem(CAMERA_RESUME_PAGE_KEY,'upload');
+    }catch(_){}
+  }
+
+  function clearCameraPending(){
+    try{
+      localStorage.removeItem(CAMERA_PENDING_KEY);
+      localStorage.removeItem(CAMERA_STARTED_KEY);
+      localStorage.removeItem(CAMERA_RESUME_PAGE_KEY);
+    }catch(_){}
+    if(cameraRecoveryTimeout){
+      clearTimeout(cameraRecoveryTimeout);
+      cameraRecoveryTimeout=null;
+    }
+  }
+
+  function hasPendingCameraRecovery(){
+    try{
+      if(localStorage.getItem(CAMERA_PENDING_KEY)!=='1')return false;
+      const started=Number(localStorage.getItem(CAMERA_STARTED_KEY)||0);
+      // Régi, félbemaradt jelzőt ne őrizzünk örökké.
+      if(started && Date.now()-started>5*60*1000){
+        clearCameraPending();
+        return false;
+      }
+      return true;
+    }catch(_){
+      return false;
+    }
+  }
+
+  function showCameraRecoverySplash(){
+    if(!hasPendingCameraRecovery())return;
+    window.ItalPontBootSplash?.show?.('Kamerakép visszaállítása…');
+  }
+
+  function navigateToUploadWhenReady(mode='normal'){
     let tries=0;
     const timer=setInterval(()=>{
       tries++;
@@ -87,17 +157,60 @@
         clearInterval(timer);
         const btn=document.querySelector('.navbtn[data-page="upload"]');
         window.showPage('upload',btn);
-        if(restored && typeof window.message==='function'){
-          window.message('uploadMsg','A kamerából visszaállított kép megmaradt. Ellenőrizd, majd töltsd fel.');
-        }else if(restored){
-          const msg=$('uploadMsg');
-          if(msg){msg.textContent='A kamerából visszaállított kép megmaradt. Ellenőrizd, majd töltsd fel.';msg.className='msg success';}
+
+        if(mode==='restored'){
+          if(typeof window.message==='function'){
+            window.message('uploadMsg','A kamerakép sikeresen visszaállt. Ellenőrizd, majd töltsd fel.');
+          }
+          clearCameraPending();
+        }else if(mode==='recovering'){
+          if(typeof window.message==='function'){
+            window.message('uploadMsg','Kamerakép visszaállítása folyamatban…',false);
+          }
         }
-        localStorage.removeItem('italpont_camera_restore_pending');
-      }else if(tries>=60){
+
+        window.ItalPontBootSplash?.hide?.(180);
+      }else if(tries>=80){
         clearInterval(timer);
       }
-    },200);
+    },150);
+  }
+
+  function startCameraRecoveryTimeout(){
+    if(!hasPendingCameraRecovery())return;
+    if(cameraRecoveryTimeout)clearTimeout(cameraRecoveryTimeout);
+
+    cameraRecoveryTimeout=setTimeout(()=>{
+      if(!hasPendingCameraRecovery())return;
+
+      // Ha már megjött az eredmény, még hagyunk időt a WebView fájl-elérésnek.
+      if(pendingRestoredCameraResult){
+        cameraRecoveryTimeout=setTimeout(startCameraRecoveryTimeout,3500);
+        return;
+      }
+
+      clearCameraPending();
+      window.ItalPontBootSplash?.hide?.(120);
+      navigateToUploadWhenReady('normal');
+
+      setTimeout(()=>{
+        if(typeof window.message==='function'){
+          window.message(
+            'uploadMsg',
+            'A kamera bezárult, de a kép nem érkezett vissza az alkalmazásba. Próbáld meg újra; az ItalPont most már nem dob vissza a főoldalra.',
+            true
+          );
+        }
+      },250);
+    },12000);
+  }
+
+  function resumeCameraRecoveryUi(){
+    if(!hasPendingCameraRecovery())return false;
+    showCameraRecoverySplash();
+    navigateToUploadWhenReady('recovering');
+    startCameraRecoveryTimeout();
+    return true;
   }
 
   function extractRestoredMedia(event){
@@ -111,16 +224,22 @@
 
   async function flushPendingRestoredPhoto(){
     if(!pendingRestoredCameraResult || typeof window.setNativeDrinkPhoto!=='function')return false;
+
     const result=pendingRestoredCameraResult;
-    pendingRestoredCameraResult=null;
     try{
       const file=await resultToFile(result,'camera-restored.jpg');
-      setNativePhoto(file,result?.webPath);
-      localStorage.setItem('italpont_camera_restore_pending','1');
-      navigateToUploadWhenReady(true);
+
+      // Csak a sikeres beolvasás UTÁN töröljük a pending resultot.
+      // Korábban egy túl korai WebView/fetch hiba végleg elvesztette a képet.
+      pendingRestoredCameraResult=null;
+
+      setNativePhoto(file,result?.webPath,'camera');
+      navigateToUploadWhenReady('restored');
       return true;
     }catch(e){
-      console.error('Visszaállított kamerakép feldolgozási hiba:',e);
+      // Fontos: pendingRestoredCameraResult megmarad, így a következő retry
+      // ugyanazt a képet újra megpróbálja beolvasni.
+      console.warn('Visszaállított kamerakép még nem olvasható, újrapróbáljuk:',e);
       return false;
     }
   }
@@ -133,18 +252,39 @@
 
     await App.addListener('appRestoredResult',async event=>{
       if(event?.pluginId!=='Camera')return;
+
+      showCameraRecoverySplash();
+      navigateToUploadWhenReady('recovering');
+
       if(!event.success){
         console.warn('Camera restored result hiba:',event?.error);
+        clearCameraPending();
+        window.ItalPontBootSplash?.hide?.(120);
+        setTimeout(()=>{
+          if(typeof window.message==='function'){
+            window.message('uploadMsg','A kamera nem adott vissza képet. Próbáld újra.',true);
+          }
+        },250);
         return;
       }
+
       const result=extractRestoredMedia(event);
-      if(!result)return;
-      pendingRestoredCameraResult=result;
-      // A restored event nagyon korán érkezhet, ezért késleltetve is próbáljuk.
-      for(let i=0;i<40 && pendingRestoredCameraResult;i++){
-        if(await flushPendingRestoredPhoto())break;
-        await new Promise(r=>setTimeout(r,150));
+      if(!result){
+        console.warn('Camera restored result: nincs feldolgozható data.');
+        startCameraRecoveryTimeout();
+        return;
       }
+
+      pendingRestoredCameraResult=result;
+
+      // Android process/Activity újraindításkor az event gyakran hamarabb érkezik,
+      // mint hogy a Capacitor helyi fájlszervere teljesen készen állna.
+      for(let i=0;i<60 && pendingRestoredCameraResult;i++){
+        if(await flushPendingRestoredPhoto())break;
+        await new Promise(r=>setTimeout(r,250));
+      }
+
+      if(pendingRestoredCameraResult)startCameraRecoveryTimeout();
     });
   }
 
@@ -154,6 +294,7 @@
     if(!Camera)throw new Error('A Camera plugin nincs szinkronizálva. Futtasd: npm run android:update');
 
     setCameraBusy(true);
+    markCameraPending();
     try{
       let result;
       if(typeof Camera.takePhoto==='function'){
@@ -180,9 +321,11 @@
         });
       }
       const file=await resultToFile(result,'camera.jpg');
-      setNativePhoto(file,result?.webPath);
-      navigateToUploadWhenReady(false);
+      setNativePhoto(file,result?.webPath,'camera');
+      clearCameraPending();
+      navigateToUploadWhenReady('normal');
     }catch(e){
+      clearCameraPending();
       if(String(e?.message||e).toLowerCase().includes('cancel'))return;
       alert(`Kamera hiba: ${e?.message||e}`);
     }finally{
@@ -221,8 +364,8 @@
       }
       if(!result)return;
       const file=await resultToFile(result,'gallery.jpg');
-      setNativePhoto(file,result?.webPath);
-      navigateToUploadWhenReady(false);
+      setNativePhoto(file,result?.webPath,'gallery');
+      navigateToUploadWhenReady('normal');
     }catch(e){
       if(String(e?.message||e).toLowerCase().includes('cancel'))return;
       alert(`Galéria hiba: ${e?.message||e}`);
@@ -431,6 +574,13 @@
       if(state?.isActive){
         resumePendingInstall();
         checkForUpdates(false);
+
+        if(hasPendingCameraRecovery()){
+          resumeCameraRecoveryUi();
+          if(pendingRestoredCameraResult){
+            flushPendingRestoredPhoto().catch(e=>console.warn('Camera resume restore:',e));
+          }
+        }
       }
     });
   }
@@ -461,6 +611,8 @@
     enablePush,
     unregisterPush,
     flushPendingRestoredPhoto,
+    hasPendingCameraRecovery,
+    resumeCameraRecoveryUi,
     checkForUpdates,
     installAndroidUpdate,
     openUpdateInBrowser
@@ -468,6 +620,14 @@
 
   initRestoredResultListener().catch(e=>console.warn('App restored listener:',e));
   initAppLifecycle().catch(e=>console.warn('App lifecycle listener:',e));
+
+  // Process death után már a DOM felépülésekor jelezzük, hogy nem a főoldalra
+  // akarunk visszatérni, hanem a kamerakép helyreállítása folyik.
+  document.addEventListener('DOMContentLoaded',()=>{
+    if(hasPendingCameraRecovery()){
+      resumeCameraRecoveryUi();
+    }
+  });
   window.addEventListener('load',()=>{
     flushPendingRestoredPhoto().catch(e=>console.warn(e));
     if(localStorage.getItem('italpont_camera_restore_pending')==='1')navigateToUploadWhenReady(true);
