@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V6.0.6</title>
+<title>ItalPont V6.0.7</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="6.0.6">
+<meta name="italpont-version" content="6.0.7">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -371,7 +371,7 @@ body{
 </style>
 <link rel="stylesheet" href="./theme-v580.css">
 <link rel="stylesheet" href="./theme-v590.css">
-<link rel="stylesheet" href="./theme-v600.css?v=6.0.6">
+<link rel="stylesheet" href="./theme-v600.css?v=6.0.7">
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
 <script src="./pwa.js"></script>
@@ -953,12 +953,33 @@ window.ItalPontBootSplash={
   </div>
 </div>
 
+<div id="groupManageModal" class="modal hidden">
+  <div class="modal-card group-manage-card">
+    <div class="group-manage-head">
+      <div>
+        <div class="eyebrow">CSOPORTADMIN</div>
+        <h2 id="groupManageTitle" style="margin:3px 0 4px">Csoport kezelése</h2>
+        <div class="muted">Itt csak az adott csoport tagságát kezeled. A felhasználói fiókok nem törlődnek.</div>
+      </div>
+      <button class="icon-btn" type="button" onclick="closeGroupManage()" aria-label="Bezárás">✕</button>
+    </div>
+    <div class="group-manage-actions">
+      <button id="groupManageInviteBtn" class="btn secondary" type="button">🔗 Meghívó megosztása</button>
+    </div>
+    <div class="group-manage-section">
+      <div class="panel-title"><div><div class="eyebrow">TAGOK</div><h3>Csoporttagok</h3></div></div>
+      <div id="groupManageMembers" class="group-member-list"><div class="muted">Tagok betöltése…</div></div>
+    </div>
+    <div id="groupManageMsg" class="msg hidden"></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://wqtldrwvharmlkqqfdmk.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_oCTAIcer2GaXeokcd6JN8A_ulUZh8QN";
 let sb=null,currentUser=null,currentProfile=null,categories=[],currentPeriod='week',selectedLeaderDate=new Date();
-let groups=[],activeGroup=null,activeGroupId=null,activeGroupDrinkCache=null;
+let groups=[],activeGroup=null,activeGroupId=null,activeGroupDrinkCache=null,managedGroupId=null;
 let appStartPromise=null;
 let appStartedUserId=null;
 let categoryDraft=[],deletedCategoryIds=[];
@@ -1776,6 +1797,8 @@ function showPage(page,btn,options={}){
 }
 
 function closeOverlayForBack(){
+  const groupManage=$('groupManageModal');
+  if(groupManage&&!groupManage.classList.contains('hidden')){closeGroupManage();return true}
   const image=$('imageModal');
   if(image&&!image.classList.contains('hidden')){hide('imageModal');return true}
   const edit=$('drinkEditModal');
@@ -1853,14 +1876,28 @@ function setGroupNavState(){
   document.querySelectorAll('.group-nav').forEach(el=>el.classList.toggle('hidden',!has));
   if($('brandSub'))$('brandSub').textContent=has?(activeGroup?.name||'Csoport'):'Saját fiók';
 }
-function buildInviteLink(code){
-  const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('invite',code);return url.toString();
+function buildInviteLink(group){
+  const url=new URL(location.href);
+  url.search='';
+  url.hash='';
+  url.searchParams.set('invite',group.invite_code);
+  // A group paraméter az invite_code mellett egy második kötést ad.
+  // A V6.0.7 backend a csatlakozás ELŐTT ellenőrzi, hogy a kettő ugyanahhoz a csoporthoz tartozik-e.
+  url.searchParams.set('group',group.id);
+  return url.toString();
 }
-function inviteCodeFromValue(value){
-  const raw=String(value||'').trim();if(!raw)return '';
-  try{const url=new URL(raw,location.href);const code=url.searchParams.get('invite');if(code)return code.trim();}catch(_){}
-  const match=raw.match(/[?&]invite=([^&#]+)/i);return match?decodeURIComponent(match[1]).trim():raw;
+function invitePayloadFromValue(value){
+  const raw=String(value||'').trim();
+  if(!raw)return {code:'',groupId:null};
+  try{
+    const url=new URL(raw,location.href);
+    const code=url.searchParams.get('invite');
+    if(code)return {code:code.trim(),groupId:(url.searchParams.get('group')||'').trim()||null};
+  }catch(_){}
+  const match=raw.match(/[?&]invite=([^&#]+)/i);
+  return {code:match?decodeURIComponent(match[1]).trim():raw,groupId:null};
 }
+function inviteCodeFromValue(value){return invitePayloadFromValue(value).code;}
 function groupModeText(group){return group.import_existing_data?'📥 Meglévő adatokkal':'✨ Tiszta lappal';}
 async function loadGroups(){
   if(!sb||!currentUser)return;
@@ -1899,7 +1936,7 @@ async function renderMyGroups(){
     const isCreator=String(g.owner_id||'')===String(currentUser?.id||'');
     return `<div class="group-card${isActive?' active-group-card':''}">
     <div class="group-card-icon">👥</div><div class="group-card-main"><b>${esc(g.name)}${isActive?' <span class="group-active-badge">Aktív</span>':''}</b><div class="muted">${groupModeText(g)} · ${counts.get(String(g.id))||1} tag${isCreator?' · Te vagy a létrehozó':''}</div></div>
-    <div class="group-card-actions"><button class="btn small" type="button" onclick="selectGroup('${g.id}')">${isActive?'Megnyitás':'Váltás ide'}</button><button class="btn secondary small" type="button" onclick="shareGroupInvite('${g.id}')">🔗 Meghívás</button>${isCreator?`<button class="btn danger small" type="button" onclick="deleteOwnedGroup('${g.id}')">🗑️ Csoport törlése</button>`:''}</div>
+    <div class="group-card-actions"><button class="btn small" type="button" onclick="selectGroup('${g.id}')">${isActive?'Megnyitás':'Váltás ide'}</button><button class="btn secondary small" type="button" onclick="shareGroupInvite('${g.id}')">🔗 Meghívás</button>${isCreator?`<button class="btn secondary small" type="button" onclick="openGroupManage('${g.id}')">⚙️ Kezelés</button><button class="btn danger small" type="button" onclick="deleteOwnedGroup('${g.id}')">🗑️ Csoport törlése</button>`:''}</div>
   </div>`;
   }).join('');
 }
@@ -1954,9 +1991,24 @@ async function createNewGroup(){
   try{message('createGroupMsg','Csoport létrehozása…');const {data,error}=await sb.rpc('create_group',{p_name:name,p_import_existing:selectedGroupImportMode()});if(error)throw error;$('newGroupName').value='';await loadGroups();message('createGroupMsg','Csoport létrehozva.');toggleGroupCreateForm(false);if(data)await selectGroup(data);}catch(e){message('createGroupMsg',e.message||String(e),true);}
 }
 window.createNewGroup=createNewGroup;
-async function joinGroupByCode(code,fromDeepLink=false){
-  const clean=inviteCodeFromValue(code);if(!clean)throw new Error('Hiányzik a meghívókód.');const {data,error}=await sb.rpc('join_group_by_invite',{p_invite_code:clean});if(error)throw error;await loadGroups();if(data)await selectGroup(data);
-  if(fromDeepLink){try{const u=new URL(location.href);u.searchParams.delete('invite');history.replaceState({...history.state,italpontPage:'home',italpontDepth:0,italpontGroupId:activeGroupId||null},'',u.toString());}catch(_){}}
+async function joinGroupByCode(value,fromDeepLink=false){
+  const payload=invitePayloadFromValue(value);
+  if(!payload.code)throw new Error('Hiányzik a meghívókód.');
+  const {data,error}=await sb.rpc('join_group_by_invite_checked',{
+    p_invite_code:payload.code,
+    p_expected_group_id:payload.groupId||null
+  });
+  if(error)throw error;
+  await loadGroups();
+  if(data)await selectGroup(data);
+  if(fromDeepLink){
+    try{
+      const u=new URL(location.href);
+      u.searchParams.delete('invite');
+      u.searchParams.delete('group');
+      history.replaceState({...history.state,italpontPage:'home',italpontDepth:0,italpontGroupId:activeGroupId||null},'',u.toString());
+    }catch(_){}
+  }
   return data;
 }
 async function joinGroupFromInput(){
@@ -1964,19 +2016,109 @@ async function joinGroupFromInput(){
 }
 window.joinGroupFromInput=joinGroupFromInput;
 async function handlePendingInvite(){
-  const code=new URL(location.href).searchParams.get('invite');if(!code)return;
-  try{await joinGroupByCode(code,true);}catch(e){console.error(e);showPage('personal',document.querySelector('.navbtn[data-page="personal"]'),{history:'replace',depth:0});message('joinGroupMsg',`A meghívó nem használható: ${e.message||String(e)}`,true);}
+  const url=new URL(location.href);
+  const code=url.searchParams.get('invite');
+  if(!code)return;
+  // A teljes URL-t adjuk át, hogy a V6.0.7 a group azonosítót is ellenőrizhesse.
+  try{await joinGroupByCode(url.toString(),true);}catch(e){console.error(e);showPage('personal',document.querySelector('.navbtn[data-page="personal"]'),{history:'replace',depth:0});message('joinGroupMsg',`A meghívó nem használható: ${e.message||String(e)}`,true);}
 }
 async function copyText(text){
   if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return true;}const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();const ok=document.execCommand('copy');area.remove();return ok;
 }
 async function shareGroupInvite(groupId){
-  const group=groups.find(g=>String(g.id)===String(groupId));if(!group?.invite_code)return alert('Ehhez a csoporthoz nem található meghívókód.');const link=buildInviteLink(group.invite_code);
-  try{if(navigator.share){await navigator.share({title:`ItalPont · ${group.name}`,text:`Csatlakozz az ItalPont csoportomhoz: ${group.name}`,url:link});return;}}catch(e){if(e?.name==='AbortError')return;}
-  try{await copyText(link);alert('A meghívó link a vágólapra került.');}catch(_){prompt('Másold ki a meghívó linket:',link);}
+  const id=String(groupId||'');
+  if(!id)return;
+  try{
+    // Mindig a kattintott csoport ID-jára kérjük le frissen az invite_code-ot.
+    // Nem az aktív/korábban megjegyzett csoport kódját használjuk.
+    const {data:group,error}=await sb.from('groups').select('id,name,invite_code').eq('id',id).single();
+    if(error)throw error;
+    if(!group?.invite_code||String(group.id)!==id)throw new Error('Ehhez a csoporthoz nem található érvényes meghívókód.');
+    const link=buildInviteLink(group);
+    try{if(navigator.share){await navigator.share({title:`ItalPont · ${group.name}`,text:`Csatlakozz az ItalPont csoportomhoz: ${group.name}`,url:link});return;}}catch(e){if(e?.name==='AbortError')return;}
+    try{await copyText(link);alert(`A(z) „${group.name}” csoport meghívó linkje a vágólapra került.`);}catch(_){prompt(`Másold ki a(z) „${group.name}” csoport meghívó linkjét:`,link);}
+  }catch(e){
+    alert(`A meghívó létrehozása nem sikerült: ${e.message||String(e)}`);
+  }
 }
 window.shareGroupInvite=shareGroupInvite;
 function shareActiveGroupInvite(){if(activeGroupId)return shareGroupInvite(activeGroupId);}window.shareActiveGroupInvite=shareActiveGroupInvite;
+
+async function openGroupManage(groupId){
+  const group=groups.find(g=>String(g.id)===String(groupId));
+  if(!group)return;
+  if(String(group.owner_id||'')!==String(currentUser?.id||'')){
+    alert('A csoport tagjait csak a csoport létrehozója kezelheti.');
+    return;
+  }
+  managedGroupId=group.id;
+  if($('groupManageTitle'))$('groupManageTitle').textContent=`⚙️ ${group.name}`;
+  if($('groupManageInviteBtn'))$('groupManageInviteBtn').onclick=()=>shareGroupInvite(group.id);
+  show('groupManageModal');
+  await loadGroupManageMembers();
+}
+window.openGroupManage=openGroupManage;
+
+function closeGroupManage(){
+  hide('groupManageModal');
+  managedGroupId=null;
+  if($('groupManageMembers'))$('groupManageMembers').innerHTML='<div class="muted">Tagok betöltése…</div>';
+  if($('groupManageMsg')){$('groupManageMsg').className='msg hidden';$('groupManageMsg').textContent='';}
+}
+window.closeGroupManage=closeGroupManage;
+
+async function loadGroupManageMembers(){
+  const target=$('groupManageMembers');
+  if(!target||!managedGroupId)return;
+  const group=groups.find(g=>String(g.id)===String(managedGroupId));
+  if(!group||String(group.owner_id||'')!==String(currentUser?.id||'')){closeGroupManage();return;}
+  target.innerHTML='<div class="muted">Tagok betöltése…</div>';
+  try{
+    const {data,error}=await sb.from('group_members')
+      .select('user_id,role,joined_at,profiles!inner(id,display_name,avatar_url)')
+      .eq('group_id',managedGroupId)
+      .order('joined_at',{ascending:true});
+    if(error)throw error;
+    const members=(data||[]).map(r=>({...r.profiles,role:r.role,joined_at:r.joined_at}));
+    target.innerHTML=members.map(m=>{
+      const isOwner=String(m.id)===String(group.owner_id);
+      const safeName=esc(m.display_name||'Névtelen');
+      const argName=safeName.replace(/'/g,'&#39;');
+      return `<div class="group-member-row">
+        <div class="group-member-person">
+          <img class="avatar" src="${esc(m.avatar_url||avatarUrl(null))}" alt="">
+          <div><b>${safeName}</b><div class="muted">${isOwner?'Csoport létrehozója':'Csoporttag'}</div></div>
+        </div>
+        ${isOwner?'<span class="badge">Tulajdonos</span>':`<button class="btn danger small" type="button" onclick="removeMemberFromGroup('${group.id}','${m.id}','${argName}')">Eltávolítás a csoportból</button>`}
+      </div>`;
+    }).join('')||'<div class="group-empty"><b>Nincs megjeleníthető tag.</b></div>';
+  }catch(e){
+    target.innerHTML=`<div class="msg error">${esc(e.message||String(e))}</div>`;
+  }
+}
+
+async function removeMemberFromGroup(groupId,userId,name){
+  const group=groups.find(g=>String(g.id)===String(groupId));
+  if(!group||String(group.owner_id||'')!==String(currentUser?.id||''))return alert('Nincs jogosultságod ehhez a művelethez.');
+  if(String(userId)===String(group.owner_id))return alert('A csoport létrehozója nem távolítható el. A csoportot külön lehet törölni.');
+  if(!confirm(`Eltávolítod ${name} felhasználót a(z) „${group.name}” csoportból?\n\nCsak ebből a csoportból kerül ki.\nA fiókja, személyes italai és más csoporttagságai NEM törlődnek.`))return;
+  try{
+    message('groupManageMsg','Eltávolítás…');
+    const {error}=await sb.rpc('remove_group_member',{p_group_id:group.id,p_user_id:userId});
+    if(error)throw error;
+    activeGroupDrinkCache=null;
+    await Promise.all([loadGroupManageMembers(),loadGroups()]);
+    if(String(activeGroupId||'')===String(group.id)){
+      await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
+      await refreshStatsIfVisible();
+    }
+    message('groupManageMsg',`${name} eltávolítva a csoportból. A felhasználói fiók megmaradt.`);
+  }catch(e){
+    message('groupManageMsg',e.message||String(e),true);
+  }
+}
+window.removeMemberFromGroup=removeMemberFromGroup;
+
 async function deleteOwnedGroup(groupId){
   const group=groups.find(g=>String(g.id)===String(groupId));
   if(!group)return;
@@ -3296,7 +3438,7 @@ async function loadAdminUsers(){
       </select>
       <div style="display:flex;gap:7px;flex-wrap:wrap">
         <button class="btn small" ${u.id===currentUser.id?'disabled':''} onclick="saveUserRole('${u.id}')">Jog mentése</button>
-        <button class="btn danger small" ${u.id===currentUser.id?'disabled':''} onclick="deleteUserAdmin('${u.id}','${esc(u.display_name||'Névtelen').replace(/'/g,'&#39;')}')">🗑️ Felhasználó</button>
+        <button class="btn danger small" ${u.id===currentUser.id?'disabled':''} onclick="deleteUserAdmin('${u.id}','${esc(u.display_name||'Névtelen').replace(/'/g,'&#39;')}')">🗑️ Fiók végleges törlése</button>
       </div>
     </div>`).join('');
 }
