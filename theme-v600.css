@@ -104,3 +104,8 @@
   .group-list-heading>.btn{width:100%}
   .group-create-inline{margin-left:-16px;margin-right:-16px;border-left:0;border-right:0;border-radius:0;padding:16px}
 }
+
+
+/* V6.0.6 — létrehozói csoporttörlés */
+.group-card-actions .btn.danger{white-space:nowrap}
+@media(max-width:600px){.group-card-actions .btn.danger{flex-basis:100%}}

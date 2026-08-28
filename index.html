@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V6.0.5</title>
+<title>ItalPont V6.0.6</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="6.0.5">
+<meta name="italpont-version" content="6.0.6">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -371,7 +371,7 @@ body{
 </style>
 <link rel="stylesheet" href="./theme-v580.css">
 <link rel="stylesheet" href="./theme-v590.css">
-<link rel="stylesheet" href="./theme-v600.css?v=6.0.5">
+<link rel="stylesheet" href="./theme-v600.css?v=6.0.6">
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
 <script src="./pwa.js"></script>
@@ -1880,7 +1880,7 @@ async function loadGroups(){
       shouldRememberFallback=true;
     }
   }
-  // Első V6.0.5 indításnál még nincs mentett választás: az Exelenciásurak legyen a természetes alap,
+  // Első V6 indításnál még nincs mentett választás: az Exelenciásurak legyen a természetes alap,
   // egyébként az első elérhető csoport. Ezután már mindig a felhasználó saját utolsó választása nyer.
   if(!preferred)preferred=groups.find(g=>String(g.name||'').localeCompare('Exelenciásurak','hu',{sensitivity:'base'})===0)||groups[0]||null;
   if(preferred)setActiveGroup(preferred,{remember:shouldRememberFallback});
@@ -1896,9 +1896,10 @@ async function renderMyGroups(){
   try{const ids=groups.map(g=>g.id);const {data}=await sb.from('group_members').select('group_id,user_id').in('group_id',ids);(data||[]).forEach(r=>counts.set(String(r.group_id),(counts.get(String(r.group_id))||0)+1));}catch(e){console.warn('Csoportlétszám:',e)}
   target.innerHTML=groups.map(g=>{
     const isActive=String(g.id)===String(activeGroupId||'');
+    const isCreator=String(g.owner_id||'')===String(currentUser?.id||'');
     return `<div class="group-card${isActive?' active-group-card':''}">
-    <div class="group-card-icon">👥</div><div class="group-card-main"><b>${esc(g.name)}${isActive?' <span class="group-active-badge">Aktív</span>':''}</b><div class="muted">${groupModeText(g)} · ${counts.get(String(g.id))||1} tag${g.role==='owner'?' · Te vagy a létrehozó':''}</div></div>
-    <div class="group-card-actions"><button class="btn small" type="button" onclick="selectGroup('${g.id}')">${isActive?'Megnyitás':'Váltás ide'}</button><button class="btn secondary small" type="button" onclick="shareGroupInvite('${g.id}')">🔗 Meghívás</button></div>
+    <div class="group-card-icon">👥</div><div class="group-card-main"><b>${esc(g.name)}${isActive?' <span class="group-active-badge">Aktív</span>':''}</b><div class="muted">${groupModeText(g)} · ${counts.get(String(g.id))||1} tag${isCreator?' · Te vagy a létrehozó':''}</div></div>
+    <div class="group-card-actions"><button class="btn small" type="button" onclick="selectGroup('${g.id}')">${isActive?'Megnyitás':'Váltás ide'}</button><button class="btn secondary small" type="button" onclick="shareGroupInvite('${g.id}')">🔗 Meghívás</button>${isCreator?`<button class="btn danger small" type="button" onclick="deleteOwnedGroup('${g.id}')">🗑️ Csoport törlése</button>`:''}</div>
   </div>`;
   }).join('');
 }
@@ -1976,6 +1977,32 @@ async function shareGroupInvite(groupId){
 }
 window.shareGroupInvite=shareGroupInvite;
 function shareActiveGroupInvite(){if(activeGroupId)return shareGroupInvite(activeGroupId);}window.shareActiveGroupInvite=shareActiveGroupInvite;
+async function deleteOwnedGroup(groupId){
+  const group=groups.find(g=>String(g.id)===String(groupId));
+  if(!group)return;
+  if(String(group.owner_id||'')!==String(currentUser?.id||'')){
+    alert('Ezt a csoportot csak a létrehozója törölheti.');
+    return;
+  }
+  const ok=confirm(`Biztosan törlöd a(z) „${group.name}” csoportot?\n\nA csoport tagsága, meghívója, ranglistája és a csoporthoz tartozó kapcsolatok megszűnnek.\nA tagok személyes italelőzményei NEM törlődnek.\n\nEz a művelet nem vonható vissza.`);
+  if(!ok)return;
+  const deletingActive=String(activeGroupId||'')===String(group.id);
+  try{
+    const {error}=await sb.from('groups').delete().eq('id',group.id).eq('owner_id',currentUser.id);
+    if(error)throw error;
+    try{
+      if(readRememberedGroupId()===String(group.id))localStorage.removeItem(lastGroupStorageKey());
+    }catch(_){}
+    if(deletingActive){activeGroup=null;activeGroupId=null;activeGroupDrinkCache=null;setGroupNavState();}
+    await loadGroups();
+    await loadPersonalDashboard();
+    showPage('personal',document.querySelector('.navbtn[data-page="personal"]'),{history:'replace',depth:0});
+    alert('A csoport törölve. A személyes italelőzmények megmaradtak.');
+  }catch(e){
+    alert(`A csoport törlése nem sikerült: ${e.message||String(e)}`);
+  }
+}
+window.deleteOwnedGroup=deleteOwnedGroup;
 document.addEventListener('change',e=>{if(e.target?.name==='groupStartMode'){document.querySelectorAll('.group-start-option').forEach(x=>x.classList.toggle('active',x.contains(e.target)));}});
 
 function openAllDrinks(){
