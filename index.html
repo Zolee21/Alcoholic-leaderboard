@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V6.0.3</title>
+<title>ItalPont V6.0.4</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="6.0.3">
+<meta name="italpont-version" content="6.0.4">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -371,7 +371,7 @@ body{
 </style>
 <link rel="stylesheet" href="./theme-v580.css">
 <link rel="stylesheet" href="./theme-v590.css">
-<link rel="stylesheet" href="./theme-v600.css?v=6.0.3">
+<link rel="stylesheet" href="./theme-v600.css?v=6.0.4">
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
 <script src="./pwa.js"></script>
@@ -460,7 +460,7 @@ window.ItalPontBootSplash={
         <button id="adminNav" class="navbtn hidden" data-page="admin" onclick="showPage('admin',this)">🛠️ Admin</button>
       </div>
       <div class="user-chip">
-        <img id="navAvatar" class="avatar" alt="profil">
+        <img id="navAvatar" class="avatar nav-profile-shortcut" alt="profil" title="Profil" role="button" tabindex="0" onclick="mobileNavigate('profile')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mobileNavigate('profile')}">
         <div class="who"><b id="navName"></b><div id="navPoints" class="muted"></div></div>
         <button class="navbtn logout-icon" onclick="logout()" title="Kijelentkezés">↪</button>
       </div>
@@ -869,11 +869,11 @@ window.ItalPontBootSplash={
     </div>
   </div>
   <nav class="bottom-nav" aria-label="Mobil navigáció">
-    <button class="active" data-bottom-page="home" onclick="mobileNavigate('home')"><span>⌂</span><small>Kezdőlap</small></button>
+    <button data-bottom-page="home" onclick="mobileNavigate('home')"><span>⌂</span><small>Kezdőlap</small></button>
     <button data-bottom-page="community" onclick="mobileNavigate('community')"><span>💬</span><small>Közösség</small></button>
     <button class="bottom-add" data-bottom-page="upload" onclick="mobileNavigate('upload')"><span>＋</span><small>Feltöltés</small></button>
     <button data-bottom-page="leader" onclick="mobileNavigate('leader')"><span>🏆</span><small>Verseny</small></button>
-    <button data-bottom-page="profile" onclick="mobileNavigate('profile')"><span>♙</span><small>Profil</small></button>
+    <button class="active" data-bottom-page="personal" onclick="openPersonalHome()"><span>👤</span><small>Saját</small></button>
   </nav>
 </div>
 
@@ -1789,12 +1789,20 @@ function closeOverlayForBack(){
   return false;
 }
 
-window.ItalPontHandleBackNavigation=function(){
+window.ItalPontHandleBackNavigation=async function(){
   if(closeOverlayForBack())return true;
   const state=history.state||{};
   const depth=Number(state.italpontDepth)||0;
   if(depth>0){
     history.back();
+    return true;
+  }
+  // Android/PWA helyreállított vagy közvetlen csoportnézetnél lehet, hogy nincs
+  // böngésző-előzmény. Ilyenkor a Saját adatok az alkalmazás biztos gyökérnézete.
+  const page=visibleAppPage();
+  if(currentUser && page!=='personal'){
+    showPage('personal',document.querySelector('.navbtn[data-page="personal"]'),{history:'replace',depth:0,scroll:false,instant:true});
+    await loadPersonalDashboard();
     return true;
   }
   return false;
@@ -1870,7 +1878,7 @@ async function loadGroups(){
       shouldRememberFallback=true;
     }
   }
-  // Első V6.0.3 indításnál még nincs mentett választás: az Exelenciásurak legyen a természetes alap,
+  // Első V6.0.4 indításnál még nincs mentett választás: az Exelenciásurak legyen a természetes alap,
   // egyébként az első elérhető csoport. Ezután már mindig a felhasználó saját utolsó választása nyer.
   if(!preferred)preferred=groups.find(g=>String(g.name||'').localeCompare('Exelenciásurak','hu',{sensitivity:'base'})===0)||groups[0]||null;
   if(preferred)setActiveGroup(preferred,{remember:shouldRememberFallback});
@@ -2076,7 +2084,9 @@ async function start(sessionOverride){
     const hadInvite=new URL(location.href).searchParams.has('invite');
     await withTimeout(handlePendingInvite(),12000,'Meghívó feldolgozása');
     if(!hadInvite && activeGroupId){
-      showPage('home',document.querySelector('.navbtn[data-page="home"]'),{history:'replace',depth:0,scroll:false,instant:true});
+      // A Saját adatok maradjon egy valódi előzmény-bejegyzés a csoport kezdőlap mögött.
+      // Így mobil weben a böngésző vissza, Androidon pedig a rendszer-vissza is oda visz.
+      showPage('home',document.querySelector('.navbtn[data-page="home"]'),{history:'push',scroll:false,instant:true});
       await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
     }
 

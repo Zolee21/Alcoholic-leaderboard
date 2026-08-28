@@ -82,3 +82,11 @@
 @media(max-width:900px){
   #app .app-workspace{width:100%;min-width:0}
 }
+
+
+/* V6.0.4 — mobil személyes gyökérnavigáció */
+.nav-profile-shortcut{cursor:pointer}
+.nav-profile-shortcut:focus-visible{outline:2px solid #a855f7;outline-offset:3px}
+@media(max-width:900px){
+  #app .user-chip .nav-profile-shortcut{cursor:pointer}
+}
