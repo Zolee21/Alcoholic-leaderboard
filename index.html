@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V6.0.2</title>
+<title>ItalPont V6.0.3</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="6.0.2">
+<meta name="italpont-version" content="6.0.3">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -371,7 +371,7 @@ body{
 </style>
 <link rel="stylesheet" href="./theme-v580.css">
 <link rel="stylesheet" href="./theme-v590.css">
-<link rel="stylesheet" href="./theme-v600.css?v=6.0.2">
+<link rel="stylesheet" href="./theme-v600.css?v=6.0.3">
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
 <script src="./pwa.js"></script>
@@ -481,17 +481,6 @@ window.ItalPontBootSplash={
     </div>
 
     <div class="app-workspace">
-    <div id="groupContextBar" class="group-context-bar">
-      <button class="group-context-personal" type="button" onclick="openPersonalHome()">👤 Saját adatok</button>
-      <div class="group-context-select">
-        <span>Aktív csoport</span>
-        <select id="groupSwitcher" onchange="selectGroup(this.value)">
-          <option value="">Válassz csoportot…</option>
-        </select>
-      </div>
-      <button id="groupInviteBtn" class="btn secondary small hidden" type="button" onclick="shareActiveGroupInvite()">🔗 Meghívó link</button>
-    </div>
-
     <main class="page">
       <section id="page-personal">
         <div class="personal-hero">
@@ -513,7 +502,7 @@ window.ItalPontBootSplash={
         <div class="personal-grid">
           <div>
             <div class="panel section"><div class="panel-pad">
-              <div class="panel-title"><div><div class="eyebrow">CSOPORTOK</div><h3>👥 Saját csoportjaim</h3></div></div>
+              <div class="panel-title"><div><div class="eyebrow">CSOPORTOK</div><h3>👥 Saját csoportjaim</h3><div class="muted group-switch-hint">Csoportot ezen az oldalon tudsz váltani.</div></div></div>
               <div id="myGroups" class="group-card-list"><div class="muted">Csoportok betöltése…</div></div>
             </div></div>
 
@@ -1815,11 +1804,9 @@ window.addEventListener('popstate',async event=>{
   if(!currentUser||$('app')?.classList.contains('hidden'))return;
   const page=event.state?.italpontPage||'personal';
   const stateGroupId=event.state?.italpontGroupId||null;
-  if(page==='personal'){
-    activeGroup=null;activeGroupId=null;activeGroupDrinkCache=null;setGroupNavState();
-  }else if(GROUP_PAGES.has(page)&&stateGroupId){
+  if(GROUP_PAGES.has(page)&&stateGroupId){
     const g=groups.find(x=>String(x.id)===String(stateGroupId));
-    if(g){activeGroup=g;activeGroupId=g.id;activeGroupDrinkCache=null;setGroupNavState();}
+    if(g && String(g.id)!==String(activeGroupId||'')){activeGroup=g;activeGroupId=g.id;activeGroupDrinkCache=null;setGroupNavState();}
   }
   if(APP_PAGES.has(page)){
     showPage(page,document.querySelector(`.navbtn[data-page="${page}"]`),{history:'none',scroll:false});
@@ -1831,12 +1818,30 @@ window.addEventListener('popstate',async event=>{
   }
 });
 
+function lastGroupStorageKey(){
+  return currentUser?.id?`italpont:last-group:${currentUser.id}`:'italpont:last-group';
+}
+function readRememberedGroupId(){
+  try{return String(localStorage.getItem(lastGroupStorageKey())||'');}catch(_){return '';}
+}
+function rememberGroupId(groupId){
+  if(!currentUser?.id||!groupId)return;
+  try{localStorage.setItem(lastGroupStorageKey(),String(groupId));}catch(_){}
+}
+function setActiveGroup(group,{remember=false}={}){
+  if(!group)return false;
+  const changed=String(activeGroupId||'')!==String(group.id);
+  activeGroup=group;
+  activeGroupId=group.id;
+  if(changed)activeGroupDrinkCache=null;
+  if(remember)rememberGroupId(group.id);
+  setGroupNavState();
+  return true;
+}
 function setGroupNavState(){
   const has=!!activeGroupId;
   document.querySelectorAll('.group-nav').forEach(el=>el.classList.toggle('hidden',!has));
-  if($('groupInviteBtn'))$('groupInviteBtn').classList.toggle('hidden',!has);
   if($('brandSub'))$('brandSub').textContent=has?(activeGroup?.name||'Csoport'):'Saját fiók';
-  if($('groupSwitcher'))$('groupSwitcher').value=has?String(activeGroupId):'';
 }
 function buildInviteLink(code){
   const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('invite',code);return url.toString();
@@ -1852,34 +1857,54 @@ async function loadGroups(){
   const {data,error}=await sb.from('group_members').select('role,joined_at,groups!inner(id,name,owner_id,invite_code,import_existing_data,created_at)').eq('user_id',currentUser.id);
   if(error)throw error;
   groups=(data||[]).map(r=>({...r.groups,role:r.role,joined_at:r.joined_at})).sort((a,b)=>a.name.localeCompare(b.name,'hu'));
-  if(activeGroupId){const refreshed=groups.find(g=>String(g.id)===String(activeGroupId));if(refreshed)activeGroup=refreshed;else{activeGroup=null;activeGroupId=null;activeGroupDrinkCache=null;}}
-  renderGroupSwitcher();await renderMyGroups();if($('personalGroupCount'))$('personalGroupCount').textContent=groups.length;setGroupNavState();
-}
-function renderGroupSwitcher(){
-  const select=$('groupSwitcher');if(!select)return;
-  select.innerHTML='<option value="">Válassz csoportot…</option>'+groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('');
-  select.value=activeGroupId?String(activeGroupId):'';
+
+  let preferred=null;
+  let shouldRememberFallback=false;
+  if(activeGroupId)preferred=groups.find(g=>String(g.id)===String(activeGroupId));
+  if(!preferred){
+    const remembered=readRememberedGroupId();
+    if(remembered){
+      preferred=groups.find(g=>String(g.id)===remembered)||null;
+      if(!preferred)shouldRememberFallback=true;
+    }else{
+      shouldRememberFallback=true;
+    }
+  }
+  // Első V6.0.3 indításnál még nincs mentett választás: az Exelenciásurak legyen a természetes alap,
+  // egyébként az első elérhető csoport. Ezután már mindig a felhasználó saját utolsó választása nyer.
+  if(!preferred)preferred=groups.find(g=>String(g.name||'').localeCompare('Exelenciásurak','hu',{sensitivity:'base'})===0)||groups[0]||null;
+  if(preferred)setActiveGroup(preferred,{remember:shouldRememberFallback});
+  else{activeGroup=null;activeGroupId=null;activeGroupDrinkCache=null;setGroupNavState();}
+
+  await renderMyGroups();
+  if($('personalGroupCount'))$('personalGroupCount').textContent=groups.length;
 }
 async function renderMyGroups(){
   const target=$('myGroups');if(!target)return;
   if(!groups.length){target.innerHTML='<div class="group-empty"><b>Még nincs csoportod.</b><span>Hozz létre egyet, vagy csatlakozz meghívó linkkel.</span></div>';return;}
   const counts=new Map();
   try{const ids=groups.map(g=>g.id);const {data}=await sb.from('group_members').select('group_id,user_id').in('group_id',ids);(data||[]).forEach(r=>counts.set(String(r.group_id),(counts.get(String(r.group_id))||0)+1));}catch(e){console.warn('Csoportlétszám:',e)}
-  target.innerHTML=groups.map(g=>`<div class="group-card">
-    <div class="group-card-icon">👥</div><div class="group-card-main"><b>${esc(g.name)}</b><div class="muted">${groupModeText(g)} · ${counts.get(String(g.id))||1} tag${g.role==='owner'?' · Te vagy a létrehozó':''}</div></div>
-    <div class="group-card-actions"><button class="btn small" type="button" onclick="selectGroup('${g.id}')">Megnyitás</button><button class="btn secondary small" type="button" onclick="shareGroupInvite('${g.id}')">🔗 Meghívás</button></div>
-  </div>`).join('');
+  target.innerHTML=groups.map(g=>{
+    const isActive=String(g.id)===String(activeGroupId||'');
+    return `<div class="group-card${isActive?' active-group-card':''}">
+    <div class="group-card-icon">👥</div><div class="group-card-main"><b>${esc(g.name)}${isActive?' <span class="group-active-badge">Aktív</span>':''}</b><div class="muted">${groupModeText(g)} · ${counts.get(String(g.id))||1} tag${g.role==='owner'?' · Te vagy a létrehozó':''}</div></div>
+    <div class="group-card-actions"><button class="btn small" type="button" onclick="selectGroup('${g.id}')">${isActive?'Megnyitás':'Váltás ide'}</button><button class="btn secondary small" type="button" onclick="shareGroupInvite('${g.id}')">🔗 Meghívás</button></div>
+  </div>`;
+  }).join('');
 }
 async function selectGroup(groupId){
   const id=String(groupId||'');if(!id){await openPersonalHome();return;}
   const group=groups.find(g=>String(g.id)===id);if(!group)return;
-  activeGroup=group;activeGroupId=group.id;activeGroupDrinkCache=null;setGroupNavState();
+  setActiveGroup(group,{remember:true});
+  await renderMyGroups();
   showPage('home',document.querySelector('.navbtn[data-page="home"]'));
   await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
 }
 window.selectGroup=selectGroup;
 async function openPersonalHome(btn){
-  activeGroup=null;activeGroupId=null;activeGroupDrinkCache=null;setGroupNavState();
+  // A Saját adatok oldal nem törli az aktív csoportot: itt lehet másik csoportot választani,
+  // majd a kiválasztás lesz a következő belépés alapértelmezett csoportja is.
+  setGroupNavState();
   showPage('personal',btn||document.querySelector('.navbtn[data-page="personal"]'));await loadPersonalDashboard();toggleMobileMenu(false);
 }
 window.openPersonalHome=openPersonalHome;
@@ -2048,7 +2073,12 @@ async function start(sessionOverride){
     // A challenge RPC ezen a ponton automatikusan jóváírhat új bónuszt.
     await withTimeout(loadProfile(),10000,'Profil frissítése');
     await withTimeout(loadPersonalDashboard(),15000,'Saját adatok betöltése');
+    const hadInvite=new URL(location.href).searchParams.has('invite');
     await withTimeout(handlePendingInvite(),12000,'Meghívó feldolgozása');
+    if(!hadInvite && activeGroupId){
+      showPage('home',document.querySelector('.navbtn[data-page="home"]'),{history:'replace',depth:0,scroll:false,instant:true});
+      await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
+    }
 
     if(window.ItalPontNative?.initPush)window.ItalPontNative.initPush();
     if(window.ItalPontPWA?.initPush)window.ItalPontPWA.initPush();
