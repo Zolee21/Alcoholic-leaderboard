@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V6.0.8</title>
+<title>ItalPont V6.0.9</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="6.0.8">
+<meta name="italpont-version" content="6.0.9">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -371,7 +371,7 @@ body{
 </style>
 <link rel="stylesheet" href="./theme-v580.css">
 <link rel="stylesheet" href="./theme-v590.css">
-<link rel="stylesheet" href="./theme-v600.css?v=6.0.8">
+<link rel="stylesheet" href="./theme-v600.css?v=6.0.9">
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
 <script src="./pwa.js"></script>
@@ -2682,7 +2682,11 @@ function feedImageUrl(d){
 }
 
 function feedHtml(d){
-  const adminControls=currentProfile?.is_admin?`<div class="drink-admin-actions"><button class="btn secondary small" onclick="openDrinkCategoryEditor(${d.id},event)">✏️ Kategória</button><button class="btn danger small" onclick="deleteDrink(${d.id},event)">🗑️ Törlés</button></div>`:'';
+  const isOwnDrink=String(d?.user_id||'')===String(currentUser?.id||'');
+  const canDeleteDrink=isOwnDrink||Boolean(currentProfile?.is_admin);
+  const adminEdit=currentProfile?.is_admin?`<button class="btn secondary small" onclick="openDrinkCategoryEditor(${d.id},event)">✏️ Kategória</button>`:'';
+  const deleteControl=canDeleteDrink?`<button class="btn danger small" onclick="deleteDrink(${d.id},event)">🗑️ ${isOwnDrink?'Saját feltöltés törlése':'Törlés'}</button>`:'';
+  const drinkControls=(adminEdit||deleteControl)?`<div class="drink-admin-actions">${adminEdit}${deleteControl}</div>`:'';
   const qty=d.quantity_label?` <span class="option-chip">${esc(d.quantity_label)}</span>`:'';
   return `<div class="feed-wrap">
     <div class="feed-card">
@@ -2691,7 +2695,7 @@ function feedHtml(d){
         <div class="feed-title">${esc(d.category_name||'Ital')}${qty}</div>
         <div class="muted">${d.brand?`<span class="option-chip">${esc(d.brand)}</span> `:''}${esc(d.drink_name)} · ${esc(d.profiles?.display_name||'Névtelen')} · ${new Date(d.created_at).toLocaleString('hu-HU')}</div>
         <button class="comment-toggle" type="button" onclick="toggleComments(${d.id},event)">💬 Hozzászólások</button>
-        ${adminControls}
+        ${drinkControls}
       </div>
       <div class="feed-points">+${d.points}<div class="muted">pont</div></div>
     </div>
@@ -2914,28 +2918,36 @@ async function saveDrinkCategoryEdit(){
 
 async function deleteDrink(id,event){
   event?.stopPropagation();
-  if(!currentProfile?.is_admin)return;
-  const {data,error}=await sb.from('drinks')
-    .select('id,drink_name,points,photo_url,photo_key')
+  const {data:preview,error:previewError}=await sb.from('drinks')
+    .select('id,user_id,drink_name,points')
     .eq('id',id).single();
+  if(previewError)return alert(previewError.message);
+
+  const isOwnDrink=String(preview?.user_id||'')===String(currentUser?.id||'');
+  if(!isOwnDrink&&!currentProfile?.is_admin)return alert('Csak a saját feltöltésedet törölheted.');
+
+  const ownText=isOwnDrink?'A feltöltés minden csoportból eltűnik, ahol megjelent.':'Rendszeradmin törlés: a feltöltés minden csoportból eltűnik.';
+  if(!confirm(`Biztosan törlöd ezt a feltöltést?
+
+${preview.drink_name}
+-${preview.points} pont
+
+${ownText}
+Ez a művelet nem vonható vissza.`))return;
+
+  const {data,error}=await sb.rpc('delete_own_drink',{p_drink_id:id});
   if(error)return alert(error.message);
-  if(!confirm(`Biztosan törlöd?
-
-${data.drink_name}
--${data.points} pont`))return;
-
-  const {error:delErr}=await sb.from('drinks').delete().eq('id',id);
-  if(delErr)return alert(delErr.message);
+  const deleted=data||{};
 
   try{
-    if(data.photo_key){
-      await deleteR2Object(data.photo_key);
-    }else if(data.photo_url){
+    if(deleted.photo_key){
+      await deleteR2Object(deleted.photo_key);
+    }else if(deleted.photo_url){
       // Régi, Supabase Storage-ban maradt V4.3 előtti kép
       const marker='/drink-photos/';
-      const pos=data.photo_url.indexOf(marker);
+      const pos=deleted.photo_url.indexOf(marker);
       if(pos>=0){
-        const path=decodeURIComponent(data.photo_url.slice(pos+marker.length));
+        const path=decodeURIComponent(deleted.photo_url.slice(pos+marker.length));
         await sb.storage.from('drink-photos').remove([path]);
       }
     }
