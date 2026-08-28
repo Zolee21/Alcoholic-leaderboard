@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.9.0</title>
+<title>ItalPont V5.9.1</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="5.9.0">
+<meta name="italpont-version" content="5.9.1">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -496,8 +496,6 @@ window.ItalPontBootSplash={
           </div>
           <div class="home-hero-actions home-primary-actions">
             <button class="btn" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">＋ Új ital</button>
-            <button class="btn secondary" onclick="showPage('community',document.querySelector('[data-page=community]'));loadDrinks()">💬 Közösség</button>
-            <button class="btn secondary" onclick="showPage('leader',document.querySelector('[data-page=leader]'))">🏆 Verseny</button>
           </div>
         </div>
 
@@ -508,23 +506,23 @@ window.ItalPontBootSplash={
               <div id="homeChallenges" class="challenge-list challenge-home"><div class="muted">Betöltés...</div></div>
             </div></div>
 
-            <div class="panel section"><div class="panel-pad">
-              <div class="panel-title"><div><div class="eyebrow">KÖZÖSSÉG</div><h3>🍸 Legutóbbi italok</h3></div><button class="text-link" onclick="openAllDrinks()">Mind ›</button></div>
-              <div id="homeFeed"></div>
-              <div class="home-feed-actions"><button class="btn full" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">＋ Ital feltöltése</button></div>
+            <div class="panel section home-recent-panel"><div class="panel-pad">
+              <div class="panel-title"><div><div class="eyebrow">KÖZÖSSÉG</div><h3>🍸 Legutóbbi 5 ital</h3></div><button class="text-link" onclick="openAllDrinks()">Mind ›</button></div>
+              <div id="homeFeed" class="home-recent-list"></div>
             </div></div>
           </div>
 
           <aside class="home-command-side">
-            <div class="panel section"><div class="panel-pad">
-              <div class="panel-title"><div><div class="eyebrow">VERSENY</div><h3>🏆 Összesített ranglista</h3></div><button class="text-link" onclick="openLeaderPage('all')">Teljes ›</button></div>
-              <div id="homeOverall"></div>
-            </div></div>
-
-            <div class="panel section"><div class="panel-pad">
-              <div class="panel-title"><div><div class="eyebrow">EZEN A HÉTEN</div><h3>🗓️ Heti ranglista</h3></div><span class="muted" id="homeWeekLabel"></span></div>
-              <div id="homeWeek"></div>
-              <button class="btn secondary full" style="margin-top:12px" onclick="openLeaderPage('week')">Heti ranglista ›</button>
+            <div class="panel section home-rank-panel"><div class="panel-pad">
+              <div class="panel-title"><div><div class="eyebrow">VERSENY</div><h3>🏆 Ranglista</h3></div><button id="homeRankFullLink" class="text-link" onclick="openLeaderPage(homeRankPeriod)">Teljes ›</button></div>
+              <div class="home-rank-toolbar">
+                <div class="home-rank-tabs" role="tablist" aria-label="Ranglista időszak">
+                  <button class="home-rank-tab active" data-home-rank="all" onclick="setHomeRankPeriod('all',this)">Összesített</button>
+                  <button class="home-rank-tab" data-home-rank="week" onclick="setHomeRankPeriod('week',this)">Heti</button>
+                </div>
+                <span class="muted home-rank-label" id="homeRankLabel"></span>
+              </div>
+              <div id="homeLeaderboard"></div>
             </div></div>
 
             <div class="panel section"><div class="panel-pad">
@@ -2020,6 +2018,54 @@ function rankRows(rows,limit=null){
     </details>`).join('')||'<div class="muted">Nincs adat.</div>';
 }
 
+let homeRankPeriod='all';
+let homeRankCache={all:null,week:null};
+
+function setHomeRankPeriod(period,btn){
+  homeRankPeriod=period==='week'?'week':'all';
+  document.querySelectorAll('[data-home-rank]').forEach(x=>x.classList.toggle('active',x.dataset.homeRank===homeRankPeriod));
+  if(btn)btn.classList.add('active');
+  renderHomeRank();
+}
+
+function renderHomeRank(){
+  const target=$('homeLeaderboard');
+  if(!target)return;
+  const result=homeRankCache[homeRankPeriod];
+  if(!result){target.innerHTML='<div class="muted">Ranglista betöltése...</div>';return;}
+  target.innerHTML=rankRows(result.rows,5);
+  const label=$('homeRankLabel');
+  if(label)label.textContent=homeRankPeriod==='week'?result.label:'';
+}
+
+function compactHomeDate(value){
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime()))return '';
+  const now=new Date();
+  const sameDay=d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()&&d.getDate()===now.getDate();
+  const time=d.toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});
+  if(sameDay)return `Ma ${time}`;
+  const yesterday=new Date(now);yesterday.setDate(now.getDate()-1);
+  const isYesterday=d.getFullYear()===yesterday.getFullYear()&&d.getMonth()===yesterday.getMonth()&&d.getDate()===yesterday.getDate();
+  if(isYesterday)return `Tegnap ${time}`;
+  return `${d.toLocaleDateString('hu-HU',{month:'2-digit',day:'2-digit'})} ${time}`;
+}
+
+function homeFeedHtml(d){
+  const qty=d.quantity_label?` · ${esc(d.quantity_label)}`:'';
+  const category=esc(d.category_name||'Ital');
+  const name=esc(d.drink_name||d.brand||d.category_name||'Ital');
+  const who=esc(d.profiles?.display_name||'Névtelen');
+  return `<div class="home-recent-row">
+    <img class="home-recent-img" src="${feedImageUrl(d)}" onclick="openImage('${encodeURIComponent(d.photo_url||'')}')" onerror="this.onerror=null;this.src=IMAGE_FALLBACK_SVG" alt="">
+    <div class="home-recent-main">
+      <div class="home-recent-title">${name}</div>
+      <div class="home-recent-meta">${category}${qty} · ${who} · ${compactHomeDate(d.created_at)}</div>
+    </div>
+    <div class="home-recent-points">+${Number(d.points)||0}<small>pont</small></div>
+  </div>`;
+}
+
 function buildConicGradient(rows){
   const total=rows.reduce((s,r)=>s+r.count,0);
   if(!total)return '#2a2e35';
@@ -2075,16 +2121,15 @@ async function loadHomeStats(){
 async function loadHome(){
   try{
     const [all,week]=await Promise.all([fetchLeaderboard('all'),fetchLeaderboard('week')]);
-    $('homeOverall').innerHTML=rankRows(all.rows,5);
-    $('homeWeek').innerHTML=rankRows(week.rows,3);
-    $('homeWeekLabel').textContent=week.label;
+    homeRankCache={all,week};
+    renderHomeRank();
     const overallIndex=all.rows.findIndex(r=>r.id===currentUser?.id);
     if($('homeHeroRank'))$('homeHeroRank').textContent=overallIndex>=0?`#${overallIndex+1}`:'–';
     const weekMe=week.rows.find(r=>r.id===currentUser?.id);
     if($('homeHeroWeekPoints'))$('homeHeroWeekPoints').textContent=`+${Number(weekMe?.points||0).toLocaleString('hu-HU')} ezen a héten`;
 
     const {data}=await sb.from('drinks').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false}).limit(5);
-    $('homeFeed').innerHTML=(data||[]).map(feedHtml).join('')||'<div class="muted">Még nincs feltöltött ital.</div>';
+    $('homeFeed').innerHTML=(data||[]).map(homeFeedHtml).join('')||'<div class="muted">Még nincs feltöltött ital.</div>';
 
     await Promise.all([loadHomeStats(),loadChallenges()]);
   }catch(e){console.error(e)}
