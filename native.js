@@ -415,8 +415,9 @@
         const drinkId=action?.notification?.data?.drink_id;
         if(drinkId)window.openDrinkFromNotification?.(drinkId);
         else{
-          const upload=document.querySelector('[data-page="upload"]');
-          window.showPage?.('upload',upload);
+          const community=document.querySelector('[data-page="community"]');
+          window.showPage?.('community',community);
+          window.loadDrinks?.();
         }
       }else{
         const home=document.querySelector('[data-page="home"]');

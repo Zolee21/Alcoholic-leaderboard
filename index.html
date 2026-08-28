@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.8.0</title>
+<title>ItalPont V5.9.0</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="5.8.0">
+<meta name="italpont-version" content="5.9.0">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -369,6 +369,7 @@ body{
 
 </style>
 <link rel="stylesheet" href="./theme-v580.css">
+<link rel="stylesheet" href="./theme-v590.css">
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
 <script src="./pwa.js"></script>
@@ -439,30 +440,35 @@ window.ItalPontBootSplash={
   <div class="shell">
     <div class="hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="navbar">
-      <div class="brand"><span>🍺</span><b>ItalPont</b></div>
+      <div class="brand"><span>🍺</span><b>ItalPont</b><small class="brand-sub">Midnight Pub</small></div>
       <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" onclick="toggleMobileMenu()" aria-expanded="false">☰ Menü</button>
       <div class="navlinks">
-        <button class="navbtn active" data-page="home" onclick="showPage('home',this)">🏠 Főoldal</button>
-        <button class="navbtn" data-page="challenges" onclick="showPage('challenges',this);loadChallenges()">🎯 Challengek</button>
-        <button class="navbtn" data-page="leader" onclick="showPage('leader',this)">🏆 Ranglisták</button>
-        <button class="navbtn" data-page="stats" onclick="showPage('stats',this);loadStatsPage()">📈 Statisztikák</button>
-        <button class="navbtn" data-page="upload" onclick="showPage('upload',this)">➕ Feltöltés</button>
-        <button class="navbtn" data-page="profile" onclick="showPage('profile',this)">👤 Profilom</button>
+        <div class="nav-group-label">Fő</div>
+        <button class="navbtn active" data-page="home" onclick="showPage('home',this)">🏠 Kezdőlap</button>
+        <button class="navbtn" data-page="community" onclick="showPage('community',this);loadDrinks()">💬 Közösség</button>
+        <button class="navbtn nav-upload" data-page="upload" onclick="showPage('upload',this)">➕ Feltöltés</button>
+        <div class="nav-group-label">Verseny</div>
+        <button class="navbtn" data-page="challenges" onclick="showPage('challenges',this);loadChallenges()">🎯 Challenge-ek</button>
+        <button class="navbtn" data-page="leader" onclick="showPage('leader',this)">🏆 Ranglista</button>
+        <button class="navbtn" data-page="stats" onclick="showPage('stats',this);loadStatsPage()">📊 Statisztika</button>
+        <div class="nav-group-label">Fiók</div>
+        <button class="navbtn" data-page="profile" onclick="showPage('profile',this)">👤 Profil</button>
         <button id="adminNav" class="navbtn hidden" data-page="admin" onclick="showPage('admin',this)">🛠️ Admin</button>
       </div>
       <div class="user-chip">
         <img id="navAvatar" class="avatar" alt="profil">
         <div class="who"><b id="navName"></b><div id="navPoints" class="muted"></div></div>
-        <button class="navbtn" onclick="logout()">↪</button>
+        <button class="navbtn logout-icon" onclick="logout()" title="Kijelentkezés">↪</button>
       </div>
 
       <div id="mobileMenu" class="mobile-menu">
-        <button class="mobile-navbtn active" data-mobile-page="home" onclick="mobileNavigate('home')">🏠 Főoldal</button>
-        <button class="mobile-navbtn" data-mobile-page="challenges" onclick="mobileNavigate('challenges')">🎯 Challengek</button>
-        <button class="mobile-navbtn" data-mobile-page="leader" onclick="mobileNavigate('leader')">🏆 Ranglisták</button>
-        <button class="mobile-navbtn" data-mobile-page="stats" onclick="mobileNavigate('stats')">📈 Statisztikák</button>
+        <button class="mobile-navbtn active" data-mobile-page="home" onclick="mobileNavigate('home')">🏠 Kezdőlap</button>
+        <button class="mobile-navbtn" data-mobile-page="community" onclick="mobileNavigate('community')">💬 Közösség</button>
         <button class="mobile-navbtn" data-mobile-page="upload" onclick="mobileNavigate('upload')">➕ Feltöltés</button>
-        <button class="mobile-navbtn" data-mobile-page="profile" onclick="mobileNavigate('profile')">👤 Profilom</button>
+        <button class="mobile-navbtn" data-mobile-page="challenges" onclick="mobileNavigate('challenges')">🎯 Challenge-ek</button>
+        <button class="mobile-navbtn" data-mobile-page="leader" onclick="mobileNavigate('leader')">🏆 Ranglista</button>
+        <button class="mobile-navbtn" data-mobile-page="stats" onclick="mobileNavigate('stats')">📊 Statisztika</button>
+        <button class="mobile-navbtn" data-mobile-page="profile" onclick="mobileNavigate('profile')">👤 Profil</button>
         <button id="mobileAdminNav" class="mobile-navbtn admin-mobile hidden" data-mobile-page="admin" onclick="mobileNavigate('admin')">🛠️ Admin</button>
         <button id="pwaInstallMenu" class="mobile-navbtn pwa-install-item hidden" onclick="ItalPontPWA.install()">📲 Telepítés iPhone-ra / mobilra</button>
         <button class="mobile-navbtn logout-mobile" onclick="logout()">↪ Kijelentkezés</button>
@@ -476,7 +482,7 @@ window.ItalPontBootSplash={
             <img id="homeHeroAvatar" class="avatar" alt="profil">
             <div>
               <div id="homeHeroGreeting" class="home-greeting">Szia! 👋</div>
-              <div class="home-tagline">Készen állsz az újabb pontokra?</div>
+              <div class="home-tagline">A mai kör itt kezdődik.</div>
             </div>
           </div>
           <div class="home-hero-stats">
@@ -488,78 +494,75 @@ window.ItalPontBootSplash={
             <div><div class="home-xp-track"><span id="homeHeroProgress"></span></div><div id="homeHeroProgressText" class="home-xp-label">Következő mérföldkő</div></div>
             <div class="pill">🍻 ItalPont</div>
           </div>
-          <div class="home-hero-actions">
-            <button class="btn" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">📷 Ital feltöltése</button>
-            <button class="btn secondary" onclick="showPage('challenges',document.querySelector('[data-page=challenges]'));loadChallenges()">🎯 Kihívások</button>
-            <button class="btn secondary" onclick="showPage('stats',document.querySelector('[data-page=stats]'));loadStatsPage()">📊 Statisztika</button>
+          <div class="home-hero-actions home-primary-actions">
+            <button class="btn" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">＋ Új ital</button>
+            <button class="btn secondary" onclick="showPage('community',document.querySelector('[data-page=community]'));loadDrinks()">💬 Közösség</button>
+            <button class="btn secondary" onclick="showPage('leader',document.querySelector('[data-page=leader]'))">🏆 Verseny</button>
           </div>
         </div>
-        <div class="grid-home">
-          <div class="leftcol">
-            <div class="panel section"><div class="panel-pad">
-              <div class="panel-title"><h3>📊 Összesített ranglista</h3></div>
-              <div id="homeOverall"></div>
-              <button class="btn secondary full" style="margin-top:12px" onclick="openLeaderPage('all')">Teljes ranglista ›</button>
 
-              <div class="home-stats-divider"></div>
-              <div class="panel-title" style="margin-bottom:8px">
-                <h3 style="font-size:16px">🍹 Fogyasztás kategóriák szerint</h3>
-              </div>
-              <div id="homeOverallStats">
-                <div class="muted">Statisztika betöltése...</div>
-              </div>
-            </div></div>
-          </div>
-
-          <div class="midcol">
-            <div class="panel section"><div class="panel-pad">
-              <div class="panel-title"><h3>🍸 Legutóbbi italok</h3><span class="muted">utolsó 5</span></div>
-              <div id="homeFeed"></div>
-              <button class="btn secondary full" style="margin-top:12px" onclick="openAllDrinks()">Összes megtekintése ›</button>
-              <button class="btn full" style="margin-top:8px" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">+ Ital feltöltése</button>
-            </div></div>
-          </div>
-
-          <div class="rightcol">
-            <div class="panel section"><div class="panel-pad">
-              <h3>⚡ Gyors műveletek</h3>
-              <div class="quick">
-                <button class="btn full" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">＋ Ital feltöltése</button>
-                <button class="btn secondary full" onclick="showPage('profile',document.querySelector('[data-page=profile]'))">👤 Profil szerkesztése</button>
-              </div>
-            </div></div>
-            <div class="panel section"><div class="panel-pad">
-              <div class="panel-title"><h3>🎯 Challengek</h3><span class="muted">napi + heti</span></div>
+        <div class="home-command-grid">
+          <div class="home-command-main">
+            <div class="panel section home-focus-card"><div class="panel-pad">
+              <div class="panel-title"><div><div class="eyebrow">MAI CÉL</div><h3>🎯 Aktív challenge-ek</h3></div><button class="text-link" onclick="showPage('challenges',document.querySelector('[data-page=challenges]'));loadChallenges()">Mind ›</button></div>
               <div id="homeChallenges" class="challenge-list challenge-home"><div class="muted">Betöltés...</div></div>
-              <button class="btn secondary full" style="margin-top:12px" onclick="showPage('challenges',document.querySelector('[data-page=challenges]'));loadChallenges()">Részletek ›</button>
             </div></div>
+
             <div class="panel section"><div class="panel-pad">
-              <div class="panel-title"><h3>🗓️ Heti ranglista</h3><span class="muted" id="homeWeekLabel"></span></div>
-              <div id="homeWeek"></div>
-              <button class="btn secondary full" style="margin-top:12px" onclick="openLeaderPage('week')">Összes heti ranglista ›</button>
+              <div class="panel-title"><div><div class="eyebrow">KÖZÖSSÉG</div><h3>🍸 Legutóbbi italok</h3></div><button class="text-link" onclick="openAllDrinks()">Mind ›</button></div>
+              <div id="homeFeed"></div>
+              <div class="home-feed-actions"><button class="btn full" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">＋ Ital feltöltése</button></div>
             </div></div>
           </div>
+
+          <aside class="home-command-side">
+            <div class="panel section"><div class="panel-pad">
+              <div class="panel-title"><div><div class="eyebrow">VERSENY</div><h3>🏆 Összesített ranglista</h3></div><button class="text-link" onclick="openLeaderPage('all')">Teljes ›</button></div>
+              <div id="homeOverall"></div>
+            </div></div>
+
+            <div class="panel section"><div class="panel-pad">
+              <div class="panel-title"><div><div class="eyebrow">EZEN A HÉTEN</div><h3>🗓️ Heti ranglista</h3></div><span class="muted" id="homeWeekLabel"></span></div>
+              <div id="homeWeek"></div>
+              <button class="btn secondary full" style="margin-top:12px" onclick="openLeaderPage('week')">Heti ranglista ›</button>
+            </div></div>
+
+            <div class="panel section"><div class="panel-pad">
+              <div class="panel-title"><div><div class="eyebrow">PUB MIX</div><h3>🍹 Kategóriák</h3></div><button class="text-link" onclick="showPage('stats',document.querySelector('[data-page=stats]'));loadStatsPage()">Részletek ›</button></div>
+              <div id="homeOverallStats"><div class="muted">Statisztika betöltése...</div></div>
+            </div></div>
+          </aside>
         </div>
       </section>
 
+      <section id="page-community" class="hidden">
+        <div class="page-head">
+          <div><div class="eyebrow">ITALPONT KÖZÖSSÉG</div><h1>💬 Közösségi fal</h1><p>Az utolsó 60 feltöltés, reakciók és hozzászólások egy helyen.</p></div>
+          <button class="btn" onclick="showPage('upload',document.querySelector('[data-page=upload]'))">＋ Új ital</button>
+        </div>
+        <div id="allDrinksPanel" class="panel community-feed-panel"><div class="panel-pad">
+          <div class="panel-title"><h3>📷 Legfrissebb feltöltések</h3><span class="muted">automatikusan frissül</span></div>
+          <div id="allDrinks" class="card-list community-list"></div>
+        </div></div>
+      </section>
+
       <section id="page-challenges" class="hidden">
-        <div class="panel"><div class="panel-pad">
-          <div class="panel-title">
-            <div>
-              <h2 style="margin-bottom:4px">🎯 Napi és heti challengek</h2>
-              <div class="muted">A feladatok automatikusan váltanak. A teljesítés és a bónuszpont szerveroldalon kerül jóváírásra.</div>
-            </div>
-          </div>
-          <div id="challengeList" class="challenge-list" style="margin-top:16px">
-            <div class="muted">Challengek betöltése...</div>
-          </div>
-          <div class="muted" style="margin-top:12px">A napi challenge minden nap, a heti challenge hétfőnként cserélődik (Budapest időzóna).</div>
+        <div class="page-head">
+          <div><div class="eyebrow">NAPI + HETI</div><h1>🎯 Challenge-ek</h1><p>Teljesíts feladatokat, szedj össze bónuszpontokat, és kapaszkodj feljebb a ranglistán.</p></div>
+          <button class="btn secondary" onclick="showPage('leader',document.querySelector('[data-page=leader]'))">🏆 Ranglista</button>
+        </div>
+        <div class="panel challenge-stage"><div class="panel-pad">
+          <div id="challengeList" class="challenge-list"><div class="muted">Challenge-ek betöltése...</div></div>
+          <div class="info-strip">🕒 A napi challenge minden nap, a heti challenge hétfőnként cserélődik Budapest időzóna szerint.</div>
         </div></div>
       </section>
 
       <section id="page-leader" class="hidden">
+        <div class="page-head">
+          <div><div class="eyebrow">VERSENY</div><h1>🏆 Ranglista</h1><p>Nézd meg, ki uralja a hetet, a hónapot vagy az egész Kultúrfarmot.</p></div>
+          <button class="btn secondary" onclick="showPage('challenges',document.querySelector('[data-page=challenges]'));loadChallenges()">🎯 Challenge-ek</button>
+        </div>
         <div class="panel"><div class="panel-pad">
-          <h2>🏆 Ranglisták</h2>
           <div class="tabs">
             <button class="tab active" data-period="week" onclick="setPeriod('week',this)">Heti</button>
             <button class="tab" data-period="month" onclick="setPeriod('month',this)">Havi</button>
@@ -602,6 +605,10 @@ window.ItalPontBootSplash={
       </section>
 
       <section id="page-stats" class="hidden">
+        <div class="page-head">
+          <div><div class="eyebrow">SZÁMOKBAN</div><h1>📊 Statisztika</h1><p>Összesített és játékosonkénti fogyasztás, kategóriákra bontva.</p></div>
+          <button class="btn secondary" onclick="showPage('profile',document.querySelector('[data-page=profile]'))">👤 Profil</button>
+        </div>
         <div class="stats-grid">
           <div class="panel"><div class="panel-pad">
             <div class="panel-title">
@@ -625,48 +632,31 @@ window.ItalPontBootSplash={
       </section>
 
       <section id="page-upload" class="hidden">
-        <div class="panel"><div class="panel-pad">
-          <h2>➕ Ital feltöltése</h2>
-          <div class="upload-steps">
-            <div class="upload-step active">Kép</div>
-            <div class="upload-step">AI felismerés</div>
-            <div class="upload-step">Kész</div>
-          </div>
-          <div class="form-grid">
-            <div><label>Ital neve</label><input id="drinkName" placeholder="pl. Soproni IPA"></div>
-            <div><label>Márka <span class="muted">(opcionális)</span></label><input id="drinkBrand" maxlength="120" placeholder="pl. Soproni"></div>
-            <div>
-              <label>Főkategória</label>
-              <select id="category" onchange="renderQuantitySelector();renderCategoryChips()"></select><div id="categoryChips" class="category-chips"></div>
-              <div id="quantityBox" class="quantity-box hidden">
-                <div class="quantity-top">
-                  <div><b>Mennyiség</b><div class="muted">Húzd a csúszkát a kívánt mennyiséghez.</div></div>
-                  <div id="quantityReadout" class="quantity-readout"></div>
-                </div>
-                <input id="quantitySlider" class="quantity-range" type="range" min="0" max="0" step="1" value="0" oninput="updateQuantityReadout()">
-                <div id="quantityScale" class="quantity-scale"></div>
-              </div>
-            </div>
-            <div>
-              <label>Fotó</label>
+        <div class="page-head upload-page-head">
+          <div><div class="eyebrow">ÚJ BEJEGYZÉS</div><h1>➕ Ital feltöltése</h1><p>Fotózd le, hagyd hogy az AI felismerje, ellenőrizd az adatokat, aztán jöhet a pont.</p></div>
+          <button class="btn secondary" onclick="showPage('community',document.querySelector('[data-page=community]'));loadDrinks()">💬 Közösségi fal</button>
+        </div>
+        <div class="upload-steps upload-steps-wide">
+          <div class="upload-step active">1 · Fotó</div>
+          <div class="upload-step">2 · AI</div>
+          <div class="upload-step">3 · Adatok</div>
+          <div class="upload-step">4 · Feltöltés</div>
+        </div>
+
+        <div class="upload-workspace">
+          <div class="upload-media-column">
+            <div class="panel upload-media-card"><div class="panel-pad">
+              <div class="panel-title"><div><div class="eyebrow">1. LÉPÉS</div><h3>📷 Fotó</h3></div><span class="pill">WebP ready</span></div>
               <div class="web-photo-input">
                 <div class="web-photo-actions">
                   <button class="btn secondary" type="button" onclick="$('photoCamera').click()">📷 Kamera</button>
                   <button class="btn secondary" type="button" onclick="$('photo').click()">🖼️ Galéria</button>
                 </div>
-
-                <!-- Kamera: capture attribútummal új fotót kér -->
                 <input id="photoCamera" class="web-photo-file" type="file" accept="image/*" capture="environment">
-
-                <!-- Galéria: SZÁNDÉKOSAN nincs capture attribútum -->
                 <input id="photo" class="web-photo-file" type="file" accept="image/*">
-
                 <div id="webPhotoPreview" class="web-photo-preview">
                   <img id="webPhotoPreviewImg" alt="Kiválasztott kép">
-                  <div class="filemeta">
-                    <b id="webPhotoName">Kép</b>
-                    <div id="webPhotoMeta" class="muted"></div>
-                  </div>
+                  <div class="filemeta"><b id="webPhotoName">Kép</b><div id="webPhotoMeta" class="muted"></div></div>
                   <button class="btn danger small" type="button" onclick="clearWebDrinkPhoto()">Eltávolítás</button>
                 </div>
               </div>
@@ -681,81 +671,98 @@ window.ItalPontBootSplash={
                   <button class="btn danger small" type="button" onclick="ItalPontNative.clearDrinkPhoto()">Eltávolítás</button>
                 </div>
               </div>
-              <div class="muted" style="margin-top:7px">Androidon és iPhone-on külön választható a Kamera és a Galéria. Feltöltés előtt minden platformon megpróbáljuk WebP-re optimalizálni a képet; ha a WebP nem lesz kisebb vagy Androidon hibás canvas keletkezne, automatikusan megtartjuk az eredeti képet. Android újraindítás esetén a kameraképet is megpróbáljuk visszaállítani.</div>
-              <div id="aiRecognitionCard" class="ai-recognition-card hidden">
-                <div class="ai-recognition-head">
-                  <div class="ai-recognition-title">🤖 AI italfelismerés</div>
-                  <div id="aiRecognitionStatus" class="ai-recognition-status">Várakozás…</div>
-                </div>
-                <div id="aiRecognitionContent">
-                  <div class="muted" style="margin-top:8px">A kép kiválasztása után automatikusan megpróbáljuk felismerni az italt.</div>
-                </div>
+              <div class="upload-help">Web, Android és iPhone/PWA: feltöltés előtt WebP optimalizálást próbálunk. Ha nem lesz kisebb vagy Androidon hibás képet észlelünk, az eredeti fájl marad.</div>
+            </div></div>
+
+            <div id="aiRecognitionCard" class="ai-recognition-card hidden">
+              <div class="ai-recognition-head">
+                <div><div class="eyebrow">2. LÉPÉS</div><div class="ai-recognition-title">🤖 AI italfelismerés</div></div>
+                <div id="aiRecognitionStatus" class="ai-recognition-status">Várakozás…</div>
               </div>
+              <div id="aiRecognitionContent"><div class="muted" style="margin-top:8px">A kép kiválasztása után automatikusan megpróbáljuk felismerni az italt.</div></div>
             </div>
           </div>
-          <button class="btn" style="margin-top:12px" onclick="uploadDrink()">Feltöltés és pont hozzáadása</button>
-          <div id="uploadMsg" class="msg hidden"></div>
-        </div></div>
-        <div id="allDrinksPanel" class="panel" style="margin-top:18px"><div class="panel-pad">
-          <h3>📷 Összes feltöltött ital</h3><div id="allDrinks" class="card-list"></div>
-        </div></div>
+
+          <div class="upload-details-column">
+            <div class="panel upload-details-card"><div class="panel-pad">
+              <div class="panel-title"><div><div class="eyebrow">3. LÉPÉS</div><h3>🍺 Ital adatai</h3></div><span class="muted">ellenőrizd az AI javaslatát</span></div>
+              <div class="form-grid upload-details-grid">
+                <div><label>Ital neve</label><input id="drinkName" placeholder="pl. Miller Genuine Draft"></div>
+                <div><label>Márka <span class="muted">(opcionális)</span></label><input id="drinkBrand" maxlength="120" placeholder="pl. Miller"></div>
+              </div>
+
+              <div class="upload-field-group">
+                <label>Főkategória</label>
+                <select id="category" onchange="renderQuantitySelector();renderCategoryChips()"></select>
+                <div id="categoryChips" class="category-chips"></div>
+              </div>
+
+              <div id="quantityBox" class="quantity-box hidden">
+                <div class="quantity-top"><div><b>Mennyiség</b><div class="muted">Húzd a csúszkát a kívánt mennyiséghez.</div></div><div id="quantityReadout" class="quantity-readout"></div></div>
+                <input id="quantitySlider" class="quantity-range" type="range" min="0" max="0" step="1" value="0" oninput="updateQuantityReadout()">
+                <div id="quantityScale" class="quantity-scale"></div>
+              </div>
+
+              <div class="upload-submit-zone">
+                <div><div class="eyebrow">4. LÉPÉS</div><b>Készen áll?</b><div class="muted">A pontot a kiválasztott kategória és mennyiség alapján kapod.</div></div>
+                <button class="btn upload-submit" onclick="uploadDrink()">Feltöltés és pont hozzáadása</button>
+              </div>
+              <div id="uploadMsg" class="msg hidden"></div>
+            </div></div>
+          </div>
+        </div>
       </section>
 
       <section id="page-profile" class="hidden">
-        <div class="panel"><div class="panel-pad">
-          <h2>👤 Profilom</h2>
-          <div class="profile-layout">
-            <div class="profile-box">
-              <img id="profileAvatar" class="avatar lg" alt="profilkép">
-              <div style="margin-top:12px"><b id="profileScore"></b></div>
-              <div id="roleBadge" class="badge hidden">ADMIN</div>
-              <div class="profile-metrics">
-                <div class="profile-metric"><b id="profileMetricDrinks">0</b><span>ital</span></div>
-                <div class="profile-metric"><b id="profileMetricPoints">0</b><span>pont</span></div>
-                <div class="profile-metric"><b id="profileMetricChallenges">0</b><span>challenge</span></div>
-              </div>
-              <div id="profileBadges" class="profile-badges"></div>
+        <div class="page-head">
+          <div><div class="eyebrow">FIÓK</div><h1>👤 Profil</h1><p>Személyes adatok, értesítések és gyors hozzáférés a saját statisztikádhoz.</p></div>
+          <button class="btn secondary" onclick="showPage('stats',document.querySelector('[data-page=stats]'));loadStatsPage()">📊 Statisztika</button>
+        </div>
+        <div class="profile-v590-layout">
+          <div class="profile-box profile-v590-hero">
+            <img id="profileAvatar" class="avatar lg" alt="profilkép">
+            <div class="profile-v590-identity"><div class="eyebrow">ITALPONT TAG</div><div style="margin-top:4px"><b id="profileScore"></b></div><div id="roleBadge" class="badge hidden">ADMIN</div></div>
+            <div class="profile-metrics">
+              <div class="profile-metric"><b id="profileMetricDrinks">0</b><span>ital</span></div>
+              <div class="profile-metric"><b id="profileMetricPoints">0</b><span>pont</span></div>
+              <div class="profile-metric"><b id="profileMetricChallenges">0</b><span>challenge</span></div>
             </div>
-            <div>
+            <div id="profileBadges" class="profile-badges"></div>
+            <div class="profile-shortcuts">
+              <button class="btn secondary full" onclick="showPage('community',document.querySelector('[data-page=community]'));loadDrinks()">💬 Közösségi fal</button>
+              <button class="btn secondary full" onclick="showPage('leader',document.querySelector('[data-page=leader]'))">🏆 Ranglista</button>
+            </div>
+          </div>
+
+          <div class="profile-v590-stack">
+            <div class="panel"><div class="panel-pad">
+              <div class="panel-title"><div><div class="eyebrow">SZEMÉLYES</div><h3>Profil szerkesztése</h3></div></div>
               <div class="form-grid">
                 <div><label>Megjelenített név</label><input id="profileName"></div>
                 <div><label>Új profilkép</label><input id="avatarFile" type="file" accept="image/*" capture="user"><div class="muted" style="margin-top:5px">Kiválasztás után megnyílik a cropper.</div></div>
               </div>
               <button class="btn" style="margin-top:12px" onclick="saveProfile()">Profil mentése</button>
               <div id="profileMsg" class="msg hidden"></div>
+            </div></div>
 
+            <div class="panel"><div class="panel-pad">
+              <div class="panel-title"><div><div class="eyebrow">ÉRTESÍTÉSEK</div><h3>Push beállítások</h3></div></div>
               <div id="nativePushSettings" class="push-card native-only">
-                <div class="push-row">
-                  <div>
-                    <b>🔔 Push értesítések</b>
-                    <div id="pushStatus" class="push-status warn" style="margin-top:4px">Állapot ellenőrzése...</div>
-                    <div class="muted" style="margin-top:3px">Új ital, új játékos és a saját feltöltésedhez érkező hozzászólás esetén.</div>
-                  </div>
-                  <button class="btn secondary" type="button" onclick="ItalPontNative.enablePush()">Értesítések bekapcsolása</button>
-                </div>
+                <div class="push-row"><div><b>🔔 Android push</b><div id="pushStatus" class="push-status warn" style="margin-top:4px">Állapot ellenőrzése...</div><div class="muted" style="margin-top:3px">Új ital, új játékos és saját feltöltésedhez érkező hozzászólás esetén.</div></div><button class="btn secondary" type="button" onclick="ItalPontNative.enablePush()">Bekapcsolás</button></div>
               </div>
-
               <div id="webPushSettings" class="push-card hidden">
-                <div class="push-row">
-                  <div>
-                    <b>🍎 iPhone / PWA push</b>
-                    <div id="webPushStatus" class="push-status warn" style="margin-top:4px">Állapot ellenőrzése...</div>
-                    <div id="webPushHint" class="muted" style="margin-top:3px">Új ital, új játékos és a saját feltöltésedhez érkező hozzászólás esetén.</div>
-                  </div>
-                  <div style="display:flex;gap:7px;flex-wrap:wrap">
-                    <button id="webPushEnableBtn" class="btn secondary" type="button" onclick="ItalPontPWA.enablePush()">Értesítések bekapcsolása</button>
-                    <button id="webPushDisableBtn" class="btn danger hidden" type="button" onclick="ItalPontPWA.disablePush()">Kikapcsolás</button>
-                  </div>
-                </div>
+                <div class="push-row"><div><b>🍎 iPhone / PWA push</b><div id="webPushStatus" class="push-status warn" style="margin-top:4px">Állapot ellenőrzése...</div><div id="webPushHint" class="muted" style="margin-top:3px">Új ital, új játékos és saját feltöltésedhez érkező hozzászólás esetén.</div></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button id="webPushEnableBtn" class="btn secondary" type="button" onclick="ItalPontPWA.enablePush()">Bekapcsolás</button><button id="webPushDisableBtn" class="btn danger hidden" type="button" onclick="ItalPontPWA.disablePush()">Kikapcsolás</button></div></div>
               </div>
-            </div>
+            </div></div>
           </div>
-        </div></div>
+        </div>
       </section>
 
       <section id="page-admin" class="hidden">
+        <div class="page-head">
+          <div><div class="eyebrow">RENDSZER</div><h1>🛠️ Admin</h1><p>Kiadások, kategóriák és felhasználók kezelése.</p></div>
+        </div>
         <div class="panel"><div class="panel-pad">
-          <h2>🛠️ Admin</h2>
           <div class="admin-release-card">
             <h3 style="margin-top:0">📦 Android frissítés közzététele</h3>
             <div class="muted">V5.5-től az Android app automatikusan ellenőrzi a legfrissebb kiadást. Az APK letöltése automatikus, az Android a telepítéshez kérhet jóváhagyást.</div>
@@ -801,9 +808,9 @@ window.ItalPontBootSplash={
   </div>
   <nav class="bottom-nav" aria-label="Mobil navigáció">
     <button class="active" data-bottom-page="home" onclick="mobileNavigate('home')"><span>⌂</span><small>Kezdőlap</small></button>
-    <button data-bottom-page="challenges" onclick="mobileNavigate('challenges')"><span>🏆</span><small>Kihívások</small></button>
+    <button data-bottom-page="community" onclick="mobileNavigate('community')"><span>💬</span><small>Közösség</small></button>
     <button class="bottom-add" data-bottom-page="upload" onclick="mobileNavigate('upload')"><span>＋</span><small>Feltöltés</small></button>
-    <button data-bottom-page="leader" onclick="mobileNavigate('leader')"><span>▥</span><small>Ranglista</small></button>
+    <button data-bottom-page="leader" onclick="mobileNavigate('leader')"><span>🏆</span><small>Verseny</small></button>
     <button data-bottom-page="profile" onclick="mobileNavigate('profile')"><span>♙</span><small>Profil</small></button>
   </nav>
 </div>
@@ -1139,7 +1146,7 @@ async function deleteAndroidRelease(id,encodedPath){
 async function openDrinkFromNotification(drinkId){
   const id=Number.parseInt(String(drinkId),10);
   if(!id)return;
-  showPage('upload',document.querySelector('[data-page="upload"]'));
+  showPage('community',document.querySelector('[data-page="community"]'));
   await loadDrinks();
   setTimeout(async()=>{
     const panel=$(`comments-${id}`);
@@ -1617,6 +1624,7 @@ function mobileNavigate(page){
   document.querySelectorAll('[data-bottom-page]').forEach(x=>x.classList.toggle('active',x.dataset.bottomPage===page));
   if(page==='stats')loadStatsPage();
   if(page==='challenges')loadChallenges();
+  if(page==='community')loadDrinks();
   toggleMobileMenu(false);
 }
 
@@ -1628,11 +1636,13 @@ function showPage(page,btn){
   if(btn)btn.classList.add('active');
   document.querySelectorAll('[data-mobile-page]').forEach(x=>x.classList.toggle('active',x.dataset.mobilePage===page));
   if(page==='stats')loadStatsPage();
+  if(page==='community')loadDrinks();
   toggleMobileMenu(false);
   window.scrollTo({top:document.querySelector('.navbar').offsetTop,behavior:'smooth'});
 }
 function openAllDrinks(){
-  showPage('upload',document.querySelector('[data-page=upload]'));
+  showPage('community',document.querySelector('[data-page=community]'));
+  loadDrinks();
   setTimeout(()=>document.getElementById('allDrinksPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),80);
 }
 
