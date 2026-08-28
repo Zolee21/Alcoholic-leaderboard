@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V6.0.0</title>
+<title>ItalPont V6.0.1</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="6.0.0">
+<meta name="italpont-version" content="6.0.1">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -488,7 +488,6 @@ window.ItalPontBootSplash={
           <option value="">Válassz csoportot…</option>
         </select>
       </div>
-      <button id="groupAdminBtn" class="btn secondary small hidden" type="button" onclick="openActiveGroupAdmin()">⚙️ Csoportadmin</button>
       <button id="groupInviteBtn" class="btn secondary small hidden" type="button" onclick="shareActiveGroupInvite()">🔗 Meghívó link</button>
     </div>
 
@@ -832,7 +831,7 @@ window.ItalPontBootSplash={
 
       <section id="page-admin" class="hidden">
         <div class="page-head">
-          <div><div class="eyebrow">RENDSZERADMIN</div><h1>🛠️ Admin</h1><p>Globális rendszerfunkciók. A kategóriák és Android-kiadások csak ezen a fiókon érhetők el.</p></div>
+          <div><div class="eyebrow">RENDSZER</div><h1>🛠️ Admin</h1><p>Kiadások, kategóriák és felhasználók kezelése.</p></div>
         </div>
         <div class="panel"><div class="panel-pad">
           <div class="admin-release-card">
@@ -896,24 +895,6 @@ window.ItalPontBootSplash={
     <button class="btn secondary small" onclick="ItalPontPWA.dismiss()">Most nem</button>
   </div>
   <div id="pwaInstallHelp" class="pwa-install-help hidden"></div>
-</div>
-
-
-<div id="groupAdminModal" class="modal hidden">
-  <div class="modal-card group-admin-modal-card">
-    <div class="panel-title">
-      <div><div class="eyebrow">CSOPORTADMIN</div><h2 id="groupAdminTitle" style="margin:3px 0 0">⚙️ Csoport kezelése</h2></div>
-      <button class="btn secondary small" type="button" onclick="closeGroupAdmin()">Bezárás</button>
-    </div>
-    <div class="group-admin-tools">
-      <button class="btn secondary" type="button" onclick="shareManagedGroupInvite()">🔗 Meghívó megosztása</button>
-      <button class="btn secondary" type="button" onclick="regenerateManagedGroupInvite()">🔄 Új meghívó link</button>
-    </div>
-    <div id="groupAdminMsg" class="msg hidden"></div>
-    <h3>Tagok</h3>
-    <div id="groupAdminMembers" class="group-admin-members"><div class="muted">Betöltés…</div></div>
-    <div class="muted" style="margin-top:10px">A csoportadmin csak ezt a csoportot kezeli. A globális kategóriák és az Android-frissítések közzététele továbbra is kizárólag a rendszeradmin számára érhető el.</div>
-  </div>
 </div>
 
 <div id="androidUpdateModal" class="modal hidden">
@@ -1802,8 +1783,6 @@ function showPage(page,btn,options={}){
 }
 
 function closeOverlayForBack(){
-  const groupAdmin=$('groupAdminModal');
-  if(groupAdmin&&!groupAdmin.classList.contains('hidden')){closeGroupAdmin();return true}
   const image=$('imageModal');
   if(image&&!image.classList.contains('hidden')){hide('imageModal');return true}
   const edit=$('drinkEditModal');
@@ -1854,7 +1833,6 @@ function setGroupNavState(){
   const has=!!activeGroupId;
   document.querySelectorAll('.group-nav').forEach(el=>el.classList.toggle('hidden',!has));
   if($('groupInviteBtn'))$('groupInviteBtn').classList.toggle('hidden',!has);
-  if($('groupAdminBtn'))$('groupAdminBtn').classList.toggle('hidden',!(has&&activeGroup?.role==='admin'));
   if($('brandSub'))$('brandSub').textContent=has?(activeGroup?.name||'Csoport'):'Saját fiók';
   if($('groupSwitcher'))$('groupSwitcher').value=has?String(activeGroupId):'';
 }
@@ -1886,8 +1864,8 @@ async function renderMyGroups(){
   const counts=new Map();
   try{const ids=groups.map(g=>g.id);const {data}=await sb.from('group_members').select('group_id,user_id').in('group_id',ids);(data||[]).forEach(r=>counts.set(String(r.group_id),(counts.get(String(r.group_id))||0)+1));}catch(e){console.warn('Csoportlétszám:',e)}
   target.innerHTML=groups.map(g=>`<div class="group-card">
-    <div class="group-card-icon">👥</div><div class="group-card-main"><b>${esc(g.name)}</b><div class="muted">${groupModeText(g)} · ${counts.get(String(g.id))||1} tag${g.role==='admin'?' · 🛡️ Csoportadmin':''}</div></div>
-    <div class="group-card-actions"><button class="btn small" type="button" onclick="selectGroup('${g.id}')">Megnyitás</button><button class="btn secondary small" type="button" onclick="shareGroupInvite('${g.id}')">🔗 Meghívás</button>${g.role==='admin'?`<button class="btn secondary small" type="button" onclick="openGroupAdmin('${g.id}')">⚙️ Kezelés</button>`:''}</div>
+    <div class="group-card-icon">👥</div><div class="group-card-main"><b>${esc(g.name)}</b><div class="muted">${groupModeText(g)} · ${counts.get(String(g.id))||1} tag${g.role==='owner'?' · Te vagy a létrehozó':''}</div></div>
+    <div class="group-card-actions"><button class="btn small" type="button" onclick="selectGroup('${g.id}')">Megnyitás</button><button class="btn secondary small" type="button" onclick="shareGroupInvite('${g.id}')">🔗 Meghívás</button></div>
   </div>`).join('');
 }
 async function selectGroup(groupId){
@@ -1927,7 +1905,7 @@ async function loadPersonalDashboard(){
 function selectedGroupImportMode(){return document.querySelector('input[name="groupStartMode"]:checked')?.value!=='clean';}
 async function createNewGroup(){
   const name=$('newGroupName')?.value.trim()||'';if(name.length<2)return message('createGroupMsg','Adj meg legalább 2 karakteres csoportnevet.',true);
-  try{message('createGroupMsg','Csoport létrehozása…');const {data,error}=await sb.rpc('create_group',{p_name:name,p_import_existing:selectedGroupImportMode()});if(error)throw error;$('newGroupName').value='';await loadGroups();message('createGroupMsg','Csoport létrehozva. Automatikusan csoportadmin lettél, és már küldheted is a meghívó linket.');if(data)await selectGroup(data);}catch(e){message('createGroupMsg',e.message||String(e),true);}
+  try{message('createGroupMsg','Csoport létrehozása…');const {data,error}=await sb.rpc('create_group',{p_name:name,p_import_existing:selectedGroupImportMode()});if(error)throw error;$('newGroupName').value='';await loadGroups();message('createGroupMsg','Csoport létrehozva. Már küldheted is a meghívó linket.');if(data)await selectGroup(data);}catch(e){message('createGroupMsg',e.message||String(e),true);}
 }
 window.createNewGroup=createNewGroup;
 async function joinGroupByCode(code,fromDeepLink=false){
@@ -1953,42 +1931,6 @@ async function shareGroupInvite(groupId){
 }
 window.shareGroupInvite=shareGroupInvite;
 function shareActiveGroupInvite(){if(activeGroupId)return shareGroupInvite(activeGroupId);}window.shareActiveGroupInvite=shareActiveGroupInvite;
-let managedGroupId=null;
-function managedGroup(){return groups.find(g=>String(g.id)===String(managedGroupId))||null;}
-async function openGroupAdmin(groupId){
-  const group=groups.find(g=>String(g.id)===String(groupId));
-  if(!group||group.role!=='admin')return;
-  managedGroupId=group.id;
-  $('groupAdminTitle').textContent=`⚙️ ${group.name}`;
-  hide('groupAdminMsg');show('groupAdminModal');
-  await loadGroupAdminMembers();
-}
-function openActiveGroupAdmin(){if(activeGroup?.role==='admin')return openGroupAdmin(activeGroup.id);}window.openActiveGroupAdmin=openActiveGroupAdmin;
-function closeGroupAdmin(){managedGroupId=null;hide('groupAdminModal');}window.closeGroupAdmin=closeGroupAdmin;
-async function loadGroupAdminMembers(){
-  const group=managedGroup();if(!group)return;
-  const target=$('groupAdminMembers');target.innerHTML='<div class="muted">Betöltés…</div>';
-  const {data,error}=await sb.from('group_members').select('user_id,role,joined_at,profiles!inner(id,display_name,avatar_url)').eq('group_id',group.id).order('joined_at');
-  if(error){target.innerHTML=`<div class="msg error">${esc(error.message)}</div>`;return;}
-  target.innerHTML=(data||[]).map(r=>{const p=r.profiles||{};const isCreator=String(p.id)===String(group.owner_id);return `<div class="group-admin-member"><div class="group-admin-member-main"><img class="avatar" src="${avatarUrl(p.avatar_url)}" alt=""><div><b>${esc(p.display_name||'Névtelen')}</b><div class="muted">${r.role==='admin'?'🛡️ Csoportadmin':'Tag'}${isCreator?' · létrehozó':''}</div></div></div>${isCreator?'':`<button class="btn danger small" type="button" onclick="removeManagedGroupMember('${p.id}','${encodeURIComponent(p.display_name||'Névtelen')}')">Eltávolítás</button>`}</div>`;}).join('')||'<div class="muted">Nincs tag.</div>';
-}
-async function removeManagedGroupMember(userId,encodedName){
-  const group=managedGroup();if(!group)return;const name=decodeURIComponent(encodedName||'Tag');
-  if(!confirm(`Eltávolítod a csoportból?\n\n${name}\n\nA saját italelőzményei megmaradnak, csak ebből a csoportból kerülnek ki.`))return;
-  const {error}=await sb.rpc('remove_group_member',{p_group_id:group.id,p_user_id:userId});
-  if(error)return message('groupAdminMsg',error.message,true);
-  message('groupAdminMsg',`${name} eltávolítva a csoportból.`);await loadGroupAdminMembers();await loadGroups();activeGroupDrinkCache=null;
-  if(String(activeGroupId)===String(group.id))await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);
-}
-async function regenerateManagedGroupInvite(){
-  const group=managedGroup();if(!group)return;
-  if(!confirm('Új meghívó linket generálsz? A régi link ezután nem használható.'))return;
-  const {data,error}=await sb.rpc('regenerate_group_invite',{p_group_id:group.id});
-  if(error)return message('groupAdminMsg',error.message,true);
-  group.invite_code=data;message('groupAdminMsg','Új meghívó link elkészült.');await loadGroups();managedGroupId=group.id;
-}
-async function shareManagedGroupInvite(){const group=managedGroup();if(group)return shareGroupInvite(group.id);}
-window.openGroupAdmin=openGroupAdmin;window.removeManagedGroupMember=removeManagedGroupMember;window.regenerateManagedGroupInvite=regenerateManagedGroupInvite;window.shareManagedGroupInvite=shareManagedGroupInvite;
 document.addEventListener('change',e=>{if(e.target?.name==='groupStartMode'){document.querySelectorAll('.group-start-option').forEach(x=>x.classList.toggle('active',x.contains(e.target)));}});
 
 function openAllDrinks(){
@@ -2519,9 +2461,7 @@ function feedImageUrl(d){
 }
 
 function feedHtml(d){
-  const systemAdminControls=currentProfile?.is_admin?`<div class="drink-admin-actions"><button class="btn secondary small" onclick="openDrinkCategoryEditor(${d.id},event)">✏️ Kategória</button><button class="btn danger small" onclick="deleteDrink(${d.id},event)">🗑️ Törlés</button></div>`:'';
-  const groupAdminControls=activeGroupId&&activeGroup?.role==='admin'?`<div class="drink-admin-actions"><button class="btn secondary small" onclick="removeDrinkFromActiveGroup(${d.id},event)">🛡️ Eltávolítás a csoportból</button></div>`:'';
-  const adminControls=systemAdminControls+groupAdminControls;
+  const adminControls=currentProfile?.is_admin?`<div class="drink-admin-actions"><button class="btn secondary small" onclick="openDrinkCategoryEditor(${d.id},event)">✏️ Kategória</button><button class="btn danger small" onclick="deleteDrink(${d.id},event)">🗑️ Törlés</button></div>`:'';
   const qty=d.quantity_label?` <span class="option-chip">${esc(d.quantity_label)}</span>`:'';
   return `<div class="feed-wrap">
     <div class="feed-card">
@@ -2659,17 +2599,6 @@ async function uploadDrink(){
 }
 
 
-
-async function removeDrinkFromActiveGroup(id,event){
-  event?.stopPropagation();
-  if(!activeGroupId||activeGroup?.role!=='admin')return;
-  if(!confirm('Eltávolítod ezt az italt ebből a csoportból?\n\nA feltöltő saját előzményeiben az ital megmarad.'))return;
-  const {error}=await sb.rpc('remove_group_drink',{p_group_id:activeGroupId,p_drink_id:id});
-  if(error)return alert(error.message);
-  activeGroupDrinkCache=null;
-  await Promise.all([loadHome(),loadLeaderboard(),loadDrinks()]);await refreshStatsIfVisible();
-}
-window.removeDrinkFromActiveGroup=removeDrinkFromActiveGroup;
 
 async function openDrinkCategoryEditor(id,event){
   event?.stopPropagation();
@@ -3279,14 +3208,24 @@ async function loadAdminUsers(){
   $('adminUsers').innerHTML=(data||[]).map(u=>`
     <div class="user-row">
       <div>
-        <b>${esc(u.display_name||'Névtelen')} ${u.is_admin?'🛡️':''}</b>
-        <div class="muted">${u.points||0} pont · 🍻 ${u.drink_count||0} ital · 🎯 ${u.challenge_count||0} challenge (+${u.challenge_points||0})${u.is_admin?' · Rendszeradmin':''}</div>
+        <b>${esc(u.display_name||'Névtelen')}</b>
+        <div class="muted">${u.points||0} pont · 🍻 ${u.drink_count||0} ital · 🎯 ${u.challenge_count||0} challenge (+${u.challenge_points||0})</div>
       </div>
-      <div class="muted">${u.is_admin?'Globális jogosultság zárolva':'Játékos'}</div>
+      <select id="role-${u.id}" ${u.id===currentUser.id?'disabled':''}>
+        <option value="false" ${!u.is_admin?'selected':''}>Játékos</option>
+        <option value="true" ${u.is_admin?'selected':''}>Admin</option>
+      </select>
       <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="btn small" ${u.id===currentUser.id?'disabled':''} onclick="saveUserRole('${u.id}')">Jog mentése</button>
         <button class="btn danger small" ${u.id===currentUser.id?'disabled':''} onclick="deleteUserAdmin('${u.id}','${esc(u.display_name||'Névtelen').replace(/'/g,'&#39;')}')">🗑️ Felhasználó</button>
       </div>
     </div>`).join('');
+}
+async function saveUserRole(id){
+  const val=$(`role-${id}`).value==='true';
+  const {error}=await sb.from('profiles').update({is_admin:val}).eq('id',id);
+  if(error)return alert(error.message);
+  await loadAdminUsers();
 }
 async function deleteUserAdmin(id,name){
   if(!currentProfile?.is_admin||id===currentUser.id)return;
