@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V5.6.5</title>
+<title>ItalPont V5.6.8</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b0d10">
-<meta name="italpont-version" content="5.6.5">
+<meta name="italpont-version" content="5.6.8">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -373,7 +373,7 @@ body{
 <script src="./pwa.js"></script>
 </head>
 <body>
-<!-- V565_CAMERA_RECOVERY_BRANDED_SPLASH -->
+<!-- V568_CAMERA_RECOVERY_BRANDED_SPLASH -->
 <div id="nativeBootSplash" class="native-boot-splash">
   <div class="native-boot-inner">
     <img class="native-boot-icon" src="assets/app-icon.png" alt="">
@@ -416,7 +416,7 @@ window.ItalPontBootSplash={
     <div class="auth-hero"><img src="assets/kulturfarm-banner.jpg" alt="G&G Kultúrfarm banner"></div>
     <div class="panel auth-panel">
       <div class="panel-pad">
-        <h1>🍺 ItalPont V5.6.5</h1>
+        <h1>🍺 ItalPont V5.6.8</h1>
         <p class="muted">G&G Kultúrfarm baráti pontverseny</p>
         <div class="form-grid">
           <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
@@ -652,7 +652,7 @@ window.ItalPontBootSplash={
                   <button class="btn danger small" type="button" onclick="ItalPontNative.clearDrinkPhoto()">Eltávolítás</button>
                 </div>
               </div>
-              <div class="muted" style="margin-top:7px">Androidon és iPhone-on külön választható a Kamera és a Galéria. Feltöltés előtt a képet max. 1600 px-re és WebP-re optimalizáljuk. Android újraindítás esetén a kameraképet is megpróbáljuk visszaállítani.</div>
+              <div class="muted" style="margin-top:7px">Androidon és iPhone-on külön választható a Kamera és a Galéria. Androidon a Camera plugin natívan max. 1280 px-re és 74%-os JPEG minőségre optimalizálja a képet, majd változtatás nélkül töltjük fel; weben/PWA-n böngészőben optimalizáljuk. Android újraindítás esetén a kameraképet is megpróbáljuk visszaállítani.</div>
               <div id="aiRecognitionCard" class="ai-recognition-card hidden">
                 <div class="ai-recognition-head">
                   <div class="ai-recognition-title">🤖 AI italfelismerés</div>
@@ -1168,6 +1168,8 @@ function renderAiRecognition(result){
     <div class="ai-confidence">
       <div class="ai-confidence-bar"><span style="width:${Math.max(0,Math.min(100,confidence))}%"></span></div>
     </div>
+    ${result.visible_text?`<div class="ai-note"><b>Látható felirat:</b> ${esc(result.visible_text)}</div>`:''}
+    ${result.evidence_label?`<div class="ai-note"><b>Felismerés alapja:</b> ${esc(result.evidence_label)}</div>`:''}
     ${result.note?`<div class="ai-note">${esc(result.note)}</div>`:''}
     <div class="ai-recognition-actions">
       <button class="btn green small" type="button" onclick="acceptAiRecognition()">✓ Javaslat elfogadása</button>
@@ -1212,17 +1214,20 @@ async function blobToDataUrl(blob){
 }
 
 async function prepareImageForRecognition(file){
-  // Kamera-JPEG esetén az eredeti képet adjuk az AI-nak, ha belefér a méretlimitbe.
-  // Így az AI sem egy esetleg hibás WebView-canvas képet kap.
+  // V5.6.6:
+  // Natív Androidnál pontosan ugyanazt a képet küldjük az AI-nak,
+  // amely az előnézetben látható. Nincs canvas, WebP vagy második JPEG-kódolás.
   if(
-    nativeDrinkPhotoSource==='camera' &&
-    /^image\/jpe?g$/i.test(file?.type||'') &&
+    window.ItalPontPlatform?.isNative===true && window.ItalPontPlatform?.isAndroid===true &&
+    nativeDrinkPhotoFile===file &&
+    file?.type?.startsWith('image/') &&
     file.size>0 &&
-    file.size<=1_750*1024
+    file.size<=5*1024*1024
   ){
     return await blobToDataUrl(file);
   }
 
+  // Web/PWA vagy kivételesen nagy natív kép.
   let blob;
   try{
     blob=await compressImageFile(file,1280,.84,'image/jpeg');
@@ -1230,7 +1235,7 @@ async function prepareImageForRecognition(file){
     if(
       String(e?.message||e)==='BLACK_CANVAS' &&
       /^image\/jpe?g$/i.test(file?.type||'') &&
-      file.size<=1_900*1024
+      file.size<=5*1024*1024
     ){
       blob=file;
     }else{
@@ -1238,10 +1243,9 @@ async function prepareImageForRecognition(file){
     }
   }
 
-  if(blob.size>1_650*1024)blob=await compressImageFile(file,1024,.78,'image/jpeg');
-  if(blob.size>1_900*1024)blob=await compressImageFile(file,896,.70,'image/jpeg');
+  if(blob.size>4.5*1024*1024)blob=await compressImageFile(file,1024,.78,'image/jpeg');
   if(!blob?.size)throw new Error('Az AI kép előkészítése sikertelen.');
-  if(blob.size>2_000*1024)throw new Error('A kép túl nagy az AI felismeréshez.');
+  if(blob.size>5*1024*1024)throw new Error('A kép túl nagy az AI felismeréshez.');
   return await blobToDataUrl(blob);
 }
 
@@ -1478,26 +1482,27 @@ async function compressImageFile(file,maxDimension=1600,quality=.82,outputType='
 }
 
 async function prepareImageForUpload(file){
-  // A natív Camera plugin már eleve max. 1600 px-re / 82%-ra készíti a JPEG-et.
-  // Android kameraképet ezért közvetlenül töltünk fel: nincs második canvas→WebP kódolás.
+  // V5.6.6:
+  // Natív Androidon NEM nyúlunk többé canvas-szal a Camera plugin képéhez.
+  // A Camera plugin már 1440px / 80%-ra optimalizálta a képet.
+  // Ugyanaz a File kerül R2-re, amelyet az előnézetben látsz.
   if(
-    nativeDrinkPhotoSource==='camera' &&
-    /^image\/jpe?g$/i.test(file?.type||'') &&
-    file.size>0 &&
-    file.size<=8*1024*1024
+    window.ItalPontPlatform?.isNative===true && window.ItalPontPlatform?.isAndroid===true &&
+    nativeDrinkPhotoFile===file &&
+    file?.type?.startsWith('image/') &&
+    file.size>0
   ){
     return file;
   }
 
-  // Androidon galériaképnél is JPEG-et preferálunk a WebP helyett.
-  const nativeAndroid=window.ItalPontPlatform?.isNativeAndroid?.()===true;
-  const outputType=nativeAndroid?'image/jpeg':'image/webp';
-
+  // Web/PWA esetén marad a böngészős optimalizálás.
   try{
-    return await compressImageFile(file,1600,.82,outputType);
+    return await compressImageFile(file,1600,.82,'image/webp');
   }catch(e){
-    if(String(e?.message||e)==='BLACK_CANVAS' && /^image\/jpe?g$/i.test(file?.type||'')){
-      console.warn('Fekete canvas észlelve; eredeti JPEG feltöltése.');
+    if(
+      String(e?.message||e)==='BLACK_CANVAS' &&
+      /^image\/jpe?g$/i.test(file?.type||'')
+    ){
       return file;
     }
     throw e;
@@ -2089,12 +2094,17 @@ async function uploadDrink(){
   if(!name||!file||!catId||!cat||!opt)return message('uploadMsg','Adj meg italnevet, kategóriát, mennyiséget és fotót.',true);
 
   try{
-    message('uploadMsg','Kép optimalizálása...');
+    message('uploadMsg','Kép előkészítése...');
     const compressed=await prepareImageForUpload(file);
-    const before=(file.size/1024/1024).toFixed(1);
+    const before=(file.size/1024/1024).toFixed(2);
     const after=(compressed.size/1024/1024).toFixed(2);
+    const nativeAndroid=window.ItalPontPlatform?.isNative===true && window.ItalPontPlatform?.isAndroid===true;
 
-    message('uploadMsg',`Feltöltés Cloudflare R2-re… (${before} MB → ${after} MB)`);
+    if(nativeAndroid){
+      message('uploadMsg',`Feltöltés Cloudflare R2-re… ${after} MB · natívan optimalizált JPEG`);
+    }else{
+      message('uploadMsg',`Feltöltés Cloudflare R2-re… (${before} MB → ${after} MB)`);
+    }
     const uploaded=await uploadBlobToR2(compressed,'drink');
 
     const {error}=await sb.from('drinks').insert({

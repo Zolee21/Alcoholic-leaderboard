@@ -1,5 +1,5 @@
 /**
- * ItalPont V5.6.5 native Android bridge.
+ * ItalPont V5.6.6 native Android bridge.
  * Kamera-stabilitás + Android appRestoredResult kezelés.
  * Weben biztonságosan no-op.
  */
@@ -299,9 +299,9 @@
       let result;
       if(typeof Camera.takePhoto==='function'){
         result=await Camera.takePhoto({
-          quality:82,
-          targetWidth:1600,
-          targetHeight:1600,
+          quality:74,
+          targetWidth:1280,
+          targetHeight:1280,
           correctOrientation:true,
           saveToGallery:false,
           cameraDirection:'REAR',
@@ -310,9 +310,9 @@
         });
       }else{
         result=await Camera.getPhoto({
-          quality:82,
-          width:1600,
-          height:1600,
+          quality:74,
+          width:1280,
+          height:1280,
           resultType:'uri',
           source:'CAMERA',
           direction:'REAR',
@@ -345,18 +345,18 @@
         const picked=await Camera.chooseFromGallery({
           mediaType:0,
           allowMultipleSelection:false,
-          quality:82,
-          targetWidth:1600,
-          targetHeight:1600,
+          quality:74,
+          targetWidth:1280,
+          targetHeight:1280,
           editable:'no',
           includeMetadata:true
         });
         result=picked?.results?.[0];
       }else{
         result=await Camera.getPhoto({
-          quality:82,
-          width:1600,
-          height:1600,
+          quality:74,
+          width:1280,
+          height:1280,
           resultType:'uri',
           source:'PHOTOS',
           correctOrientation:true
