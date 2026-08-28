@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ItalPont V6.0.7</title>
+<title>ItalPont V6.0.8</title>
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#121019">
-<meta name="italpont-version" content="6.0.7">
+<meta name="italpont-version" content="6.0.8">
 <meta name="application-name" content="ItalPont">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ItalPont">
@@ -371,7 +371,7 @@ body{
 </style>
 <link rel="stylesheet" href="./theme-v580.css">
 <link rel="stylesheet" href="./theme-v590.css">
-<link rel="stylesheet" href="./theme-v600.css?v=6.0.7">
+<link rel="stylesheet" href="./theme-v600.css?v=6.0.8">
 <script src="./platform.js"></script>
 <script src="./native.js"></script>
 <script src="./pwa.js"></script>
@@ -734,7 +734,7 @@ window.ItalPontBootSplash={
                   <button class="btn danger small" type="button" onclick="ItalPontNative.clearDrinkPhoto()">Eltávolítás</button>
                 </div>
               </div>
-              <div class="upload-help">Web, Android és iPhone/PWA: feltöltés előtt WebP optimalizálást próbálunk. Ha nem lesz kisebb vagy Androidon hibás képet észlelünk, az eredeti fájl marad.</div>
+              <div class="upload-help">Web, Android és iPhone/PWA: feltöltés előtt WebP optimalizálást próbálunk. Ha nem lesz kisebb vagy Androidon hibás képet észlelünk, az eredeti fájl marad. Az új ital automatikusan megjelenik minden csoportban, amelynek tagja vagy.</div>
             </div></div>
 
             <div id="aiRecognitionCard" class="ai-recognition-card hidden">
@@ -2799,18 +2799,41 @@ async function uploadDrink(){
       try{await deleteR2Object(uploaded.key)}catch(_){}
       throw error;
     }
-    if(activeGroupId&&createdDrink?.id){
-      const {error:groupError}=await sb.from('group_drinks').insert({group_id:activeGroupId,drink_id:createdDrink.id,added_by:currentUser.id});
-      if(groupError){
+    let linkedGroupCount=0;
+    if(createdDrink?.id){
+      // V6.0.8: minden új feltöltés automatikusan megjelenik az összes csoportban,
+      // amelynek a feltöltő a feltöltés pillanatában tagja.
+      const {data:memberRows,error:memberError}=await sb.from('group_members')
+        .select('group_id')
+        .eq('user_id',currentUser.id);
+      if(memberError){
         try{await sb.from('drinks').delete().eq('id',createdDrink.id)}catch(_){}
         try{await deleteR2Object(uploaded.key)}catch(_){}
-        throw new Error(`A csoporthoz kapcsolás nem sikerült, ezért a feltöltést visszavontuk: ${groupError.message}`);
+        throw new Error(`A csoporttagságok lekérése nem sikerült, ezért a feltöltést visszavontuk: ${memberError.message}`);
       }
-      activeGroupDrinkCache=null;
+
+      const groupIds=[...new Set((memberRows||[]).map(r=>String(r.group_id||'')).filter(Boolean))];
+      if(activeGroupId&&!groupIds.includes(String(activeGroupId)))groupIds.push(String(activeGroupId));
+
+      if(groupIds.length){
+        const rows=groupIds.map(groupId=>({
+          group_id:groupId,
+          drink_id:createdDrink.id,
+          added_by:currentUser.id
+        }));
+        const {error:groupError}=await sb.from('group_drinks').insert(rows);
+        if(groupError){
+          try{await sb.from('drinks').delete().eq('id',createdDrink.id)}catch(_){}
+          try{await deleteR2Object(uploaded.key)}catch(_){}
+          throw new Error(`Az összes csoporthoz kapcsolás nem sikerült, ezért a feltöltést visszavontuk: ${groupError.message}`);
+        }
+        linkedGroupCount=groupIds.length;
+        activeGroupDrinkCache=null;
+      }
     }
 
     $('drinkName').value='';$('drinkBrand').value='';clearWebDrinkPhoto();nativeDrinkPhotoFile=null;nativeDrinkPhotoSource=null;window.ItalPontNative?.clearDrinkPhoto();clearAiRecognition(true);
-    message('uploadMsg',`${opt.label} · +${opt.points} pont! A kép Cloudflare R2-re került.`);
+    message('uploadMsg',`${opt.label} · +${opt.points} pont! A kép Cloudflare R2-re került${linkedGroupCount?` · ${linkedGroupCount} csoportban megjelent`:''}.`);
     await loadProfile();
     await Promise.all([loadHome(),loadLeaderboard(),loadDrinks(),loadChallenges(),loadPersonalDashboard()]);await refreshStatsIfVisible();
   }catch(e){
